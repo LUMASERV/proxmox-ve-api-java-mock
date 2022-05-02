@@ -20,6 +20,6 @@ A Mockito based mock for LUMASERV/proxmox-ve-api-java
 ```java
 MockState state = new MockState();
 state.createNode("example");
-ProxMoxVEClient client = new ProxMoxVEMock.create(state);
+ProxMoxVEClient client = ProxMoxVEMock.create(state);
 client.getNodes().forEach(node -> System.out.println(node.getName()));
 ```
