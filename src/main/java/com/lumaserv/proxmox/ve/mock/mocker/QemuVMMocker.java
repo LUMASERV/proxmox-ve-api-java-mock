@@ -5,6 +5,7 @@ import com.lumaserv.proxmox.ve.apis.NodeAPI;
 import com.lumaserv.proxmox.ve.apis.QemuVMAPI;
 import com.lumaserv.proxmox.ve.mock.state.MockState;
 import com.lumaserv.proxmox.ve.mock.state.QemuVMData;
+import com.lumaserv.proxmox.ve.mock.state.TaskData;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVM;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.*;
 
@@ -48,9 +49,11 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(data.started)
                     throwError(409, "VM already running");
+                TaskData task = state.createTask(data.node, "qmstart", String.valueOf(data.id));
                 data.startedAt = System.currentTimeMillis();
                 data.started = true;
-                return "";
+                task.finish();
+                return task.upId;
             });
             when(api.shutdown()).then(i -> api.shutdown((Integer) null));
             when(api.shutdown(anyInt())).then(i -> api.shutdown(new QemuVMShutdownRequest().setTimeout(i.getArgument(0))));
@@ -61,9 +64,11 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!data.started)
                     throwError(409, "VM not running");
+                TaskData task = state.createTask(data.node, "qmshutdown", String.valueOf(data.id));
                 data.startedAt = 0;
                 data.started = false;
-                return "";
+                task.finish();
+                return task.upId;
             });
             when(api.stop()).then(i -> api.stop(new QemuVMStopRequest()));
             when(api.stop(any(QemuVMStopRequest.class))).then(i -> {
@@ -73,9 +78,11 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!data.started)
                     throwError(409, "VM not running");
+                TaskData task = state.createTask(data.node, "qmstop", String.valueOf(data.id));
                 data.startedAt = 0;
                 data.started = false;
-                return "";
+                task.finish();
+                return task.upId;
             });
             when(api.reboot()).then(i -> api.reboot((Integer) null));
             when(api.reboot(anyInt())).then(i -> api.reboot(new QemuVMRebootRequest().setTimeout(i.getArgument(0))));
@@ -86,8 +93,10 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!data.started)
                     throwError(409, "VM not running");
+                TaskData task = state.createTask(data.node, "qmreboot", String.valueOf(data.id));
                 data.startedAt = System.currentTimeMillis();
-                return "";
+                task.finish();
+                return task.upId;
             });
             when(api.delete(any(QemuVMDeleteRequest.class))).then(i -> {
                 //QemuVMDeleteRequest request = i.getArgument(0);
@@ -96,8 +105,12 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(data.started)
                     throwError(409, "VM is running");
+                TaskData task = state.createTask(data.node, "qmdestroy", String.valueOf(data.id));
+                task.log.add("Removing image: 1% complete...");
                 state.qemuVMs.remove(data.id);
-                return "";
+                task.log.add("Removing image: 100% complete...done.");
+                task.finish();
+                return task.upId;
             });
             doAnswer(i -> {
                 //QemuVMResizeRequest request = i.getArgument(0);

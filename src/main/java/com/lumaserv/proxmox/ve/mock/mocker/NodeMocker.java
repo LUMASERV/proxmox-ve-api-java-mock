@@ -5,9 +5,18 @@ import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.NodeAPI;
 import com.lumaserv.proxmox.ve.mock.state.MockState;
 import com.lumaserv.proxmox.ve.mock.state.NodeData;
+import com.lumaserv.proxmox.ve.mock.state.TaskData;
+import com.lumaserv.proxmox.ve.model.Task;
+import com.lumaserv.proxmox.ve.model.TaskLogLine;
 import com.lumaserv.proxmox.ve.model.nodes.Node;
+import com.lumaserv.proxmox.ve.request.nodes.TaskGetRequest;
+import com.lumaserv.proxmox.ve.request.nodes.TaskLogRequest;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.mockito.Mockito.*;
 
@@ -22,10 +31,79 @@ public class NodeMocker extends Mocker {
 
     public static NodeAPI mockNodeAPI(ProxMoxVEClient client, MockState state, String name) {
         NodeAPI api = mock(NodeAPI.class);
-        when(api.getClient()).thenReturn(client);
-        when(api.getNodeName()).thenReturn(name);
+        try {
+            when(api.getClient()).thenReturn(client);
+            when(api.getNodeName()).thenReturn(name);
+            when(api.getTask(anyString())).then(i -> {
+                String upid = i.getArgument(0);
+                TaskData data = state.tasks.stream().filter(t -> t.upId.equals(upid)).findFirst().orElse(null);
+                if(data == null)
+                    throwError(404, "Not Found");
+                return mockTask(data);
+            });
+            when(api.getTaskLog(anyString())).then(i -> api.getTaskLog(i.getArgument(0), new TaskLogRequest()));
+            when(api.getTaskLog(anyString(), any(TaskLogRequest.class))).then(i -> {
+                String upid = i.getArgument(0);
+                TaskLogRequest request = i.getArgument(1);
+                TaskData data = state.tasks.stream().filter(t -> t.node.equals(name) && t.upId.equals(upid)).findFirst().orElse(null);
+                if(data == null)
+                    throwError(404, "Not Found");
+                List<TaskLogLine> lines = new ArrayList<>();
+                int start = request.getStart() != null ? request.getStart() : 0;
+                if(start >= data.log.size())
+                    return lines;
+                int limit = request.getLimit() != null ? request.getLimit() : Integer.MAX_VALUE;
+                for(int j=start; j<Math.min(data.log.size(), start + limit); j++)
+                    lines.add(new TaskLogLine().setLine(j + 1).setText(data.log.get(j)));
+                return lines;
+            });
+            when(api.getTasks()).then(i -> api.getTasks(new TaskGetRequest()));
+            when(api.getTasks(any(TaskGetRequest.class))).then(i -> {
+                TaskGetRequest request = i.getArgument(0);
+                Stream<TaskData> taskStream = state.tasks.stream().filter(t -> t.node.equals(name));
+                if(request.getSince() != null)
+                    taskStream = taskStream.filter(t -> t.start >= request.getSince());
+                if(request.getUntil() != null)
+                    taskStream = taskStream.filter(t -> t.start <= request.getUntil());
+                if(request.getVmId() != null)
+                    taskStream = taskStream.filter(t -> t.vmId != null && t.vmId == request.getVmId());
+                if(request.getSource() != null && request.getSource().equals("active"))
+                    taskStream = taskStream.filter(t -> t.end == 0);
+                if(request.getErrors() != null && request.getErrors() > 0)
+                    taskStream = taskStream.filter(t -> t.error);
+                if(request.getUserFilter() != null)
+                    taskStream = taskStream.filter(t -> t.user.equals(request.getUserFilter()));
+                if(request.getTypeFilter() != null)
+                    taskStream = taskStream.filter(t -> t.type.equals(request.getTypeFilter()));
+                if(request.getStatusFilter() != null) {
+                    List<String> states = Arrays.asList(request.getStatusFilter().split(","));
+                    taskStream = taskStream.filter(t -> states.contains(t.status));
+                }
+                List<TaskData> taskDatas = taskStream.collect(Collectors.toList());
+                List<Task> tasks = new ArrayList<>();
+                int start = request.getStart() != null ? request.getStart().intValue() : 0;
+                if(start >= taskDatas.size())
+                    return tasks;
+                int limit = request.getLimit() != null ? request.getLimit() : Integer.MAX_VALUE;
+                for(int j=start; j<Math.min(taskDatas.size(), start + limit); j++)
+                    tasks.add(mockTask(taskDatas.get(j)));
+                return tasks;
+            });
+        } catch (ProxMoxVEException ignored) {}
         QemuVMMocker.mockNodeAPI(api, state);
         return api;
+    }
+
+    public static Task mockTask(TaskData data) {
+        return new Task()
+                .setUpId(data.upId)
+                .setNode(data.node)
+                .setType(data.type)
+                .setUser(data.user)
+                .setStatus(data.status)
+                .setStartTime(data.start)
+                .setEndTime(data.end > 0 ? data.end : null)
+                .setPid(0);
     }
 
     public static Node mockNode(NodeData data) {
