@@ -2,13 +2,16 @@ package com.lumaserv.proxmox.ve.mock.state;
 
 import com.lumaserv.proxmox.ve.model.sdn.SDNZone;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class SDNZoneData {
 
     public String name;
-    public String nodes;
-    public String ipam;
-    public String peers;
     public String type;
+    public List<String> peers = new ArrayList<>();
+    public List<String> nodes = new ArrayList<>();
+    public String ipam;
     public Integer mtu;
     public String dns;
     public String dnsZone;
@@ -17,13 +20,11 @@ public class SDNZoneData {
     public String reverseDns;
 
     public SDNZone toSDNZone() {
-        if(peers == null)
-            peers = "";
         return new SDNZone()
                 .setName(name)
-                .setPeers(peers)
-                .setNodes(nodes)
-                .setType(type);
+                .setType(type)
+                .setPeers(String.join(",", peers))
+                .setNodes(String.join(",", nodes));
     }
 
 }

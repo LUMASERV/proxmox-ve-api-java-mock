@@ -49,7 +49,7 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(data.started)
                     throwError(409, "VM already running");
-                TaskData task = state.createTask(data.node, "qmstart", String.valueOf(data.id));
+                TaskData task = state.createTask(data.node, "qmstart", data.id);
                 data.startedAt = System.currentTimeMillis();
                 data.started = true;
                 task.finish();
@@ -64,7 +64,7 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!data.started)
                     throwError(409, "VM not running");
-                TaskData task = state.createTask(data.node, "qmshutdown", String.valueOf(data.id));
+                TaskData task = state.createTask(data.node, "qmshutdown", data.id);
                 data.startedAt = 0;
                 data.started = false;
                 task.finish();
@@ -78,7 +78,7 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!data.started)
                     throwError(409, "VM not running");
-                TaskData task = state.createTask(data.node, "qmstop", String.valueOf(data.id));
+                TaskData task = state.createTask(data.node, "qmstop", data.id);
                 data.startedAt = 0;
                 data.started = false;
                 task.finish();
@@ -93,7 +93,7 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!data.started)
                     throwError(409, "VM not running");
-                TaskData task = state.createTask(data.node, "qmreboot", String.valueOf(data.id));
+                TaskData task = state.createTask(data.node, "qmreboot", data.id);
                 data.startedAt = System.currentTimeMillis();
                 task.finish();
                 return task.upId;
@@ -105,7 +105,7 @@ public class QemuVMMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(data.started)
                     throwError(409, "VM is running");
-                TaskData task = state.createTask(data.node, "qmdestroy", String.valueOf(data.id));
+                TaskData task = state.createTask(data.node, "qmdestroy", data.id);
                 task.log.add("Removing image: 1% complete...");
                 state.qemuVMs.remove(data.id);
                 task.log.add("Removing image: 100% complete...done.");

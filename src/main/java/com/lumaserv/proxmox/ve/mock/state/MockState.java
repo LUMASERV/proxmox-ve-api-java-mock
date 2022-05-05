@@ -9,8 +9,12 @@ public class MockState {
     public Map<Integer, QemuVMData> qemuVMs = new HashMap<>();
     public Map<String, NodeData> nodes = new HashMap<>();
     public List<TaskData> tasks = new ArrayList<>();
-    public List<SDNZoneData> sdnZones = new ArrayList<>();
-    public List<SDNVNetData> sdnVNets = new ArrayList<>();
+    public Map<String, SDNZoneData> sdnZones = new HashMap<>();
+    public Map<String, SDNVNetData> sdnVNets = new HashMap<>();
+    public List<FirewallRuleData> firewallRules = new ArrayList<>();
+    public Map<String, FirewallGroupData> firewallGroups = new HashMap<>();
+    public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();
+    public FirewallOptionsData firewallOptions = new FirewallOptionsData();
 
     public TaskData createTask(String node, String type, Integer vmId) {
         TaskData taskData = new TaskData();

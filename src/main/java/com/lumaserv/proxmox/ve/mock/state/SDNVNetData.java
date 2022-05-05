@@ -2,6 +2,8 @@ package com.lumaserv.proxmox.ve.mock.state;
 
 import com.lumaserv.proxmox.ve.model.sdn.SDNVNet;
 
+import java.util.List;
+
 public class SDNVNetData {
 
     public String name;
@@ -10,6 +12,7 @@ public class SDNVNetData {
     public Integer tag;
     public String type;
     public String alias;
+    public List<SDNSubnetData> subnets;
 
     public SDNVNet toSDNVNet() {
         return new SDNVNet()
