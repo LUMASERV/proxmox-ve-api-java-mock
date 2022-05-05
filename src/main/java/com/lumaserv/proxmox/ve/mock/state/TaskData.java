@@ -1,5 +1,7 @@
 package com.lumaserv.proxmox.ve.mock.state;
 
+import com.lumaserv.proxmox.ve.model.Task;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,6 +32,18 @@ public class TaskData {
             }
         }
         status = "stopped";
+    }
+
+    public Task toTask() {
+        return new Task()
+                .setUpId(upId)
+                .setNode(node)
+                .setType(type)
+                .setUser(user)
+                .setStatus(status)
+                .setStartTime(start)
+                .setEndTime(end > 0 ? end : null)
+                .setPid(0);
     }
 
 }

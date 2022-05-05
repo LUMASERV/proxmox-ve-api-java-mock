@@ -11,7 +11,9 @@ import static org.mockito.Mockito.mock;
 public class ProxMoxVEMock {
 
     public static ProxMoxVEClient create() {
-        return create(new MockState());
+        MockState state = new MockState();
+        state.createNode("node01");
+        return create(state);
     }
 
     public static ProxMoxVEClient create(MockState state) {

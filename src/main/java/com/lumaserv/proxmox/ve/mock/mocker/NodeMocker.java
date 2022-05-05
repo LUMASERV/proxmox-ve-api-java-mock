@@ -39,7 +39,7 @@ public class NodeMocker extends Mocker {
                 TaskData data = state.tasks.stream().filter(t -> t.upId.equals(upid)).findFirst().orElse(null);
                 if(data == null)
                     throwError(404, "Not Found");
-                return mockTask(data);
+                return data.toTask();
             });
             when(api.getTaskLog(anyString())).then(i -> api.getTaskLog(i.getArgument(0), new TaskLogRequest()));
             when(api.getTaskLog(anyString(), any(TaskLogRequest.class))).then(i -> {
@@ -86,24 +86,12 @@ public class NodeMocker extends Mocker {
                     return tasks;
                 int limit = request.getLimit() != null ? request.getLimit() : Integer.MAX_VALUE;
                 for(int j=start; j<Math.min(taskDatas.size(), start + limit); j++)
-                    tasks.add(mockTask(taskDatas.get(j)));
+                    tasks.add(taskDatas.get(j).toTask());
                 return tasks;
             });
         } catch (ProxMoxVEException ignored) {}
         QemuVMMocker.mockNodeAPI(api, state);
         return api;
-    }
-
-    public static Task mockTask(TaskData data) {
-        return new Task()
-                .setUpId(data.upId)
-                .setNode(data.node)
-                .setType(data.type)
-                .setUser(data.user)
-                .setStatus(data.status)
-                .setStartTime(data.start)
-                .setEndTime(data.end > 0 ? data.end : null)
-                .setPid(0);
     }
 
     public static Node mockNode(NodeData data) {

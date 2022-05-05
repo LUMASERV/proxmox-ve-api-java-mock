@@ -9,6 +9,8 @@ public class MockState {
     public Map<Integer, QemuVMData> qemuVMs = new HashMap<>();
     public Map<String, NodeData> nodes = new HashMap<>();
     public List<TaskData> tasks = new ArrayList<>();
+    public List<SDNZoneData> sdnZones = new ArrayList<>();
+    public List<SDNVNetData> sdnVNets = new ArrayList<>();
 
     public TaskData createTask(String node, String type, Integer vmId) {
         TaskData taskData = new TaskData();

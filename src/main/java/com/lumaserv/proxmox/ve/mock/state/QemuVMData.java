@@ -7,7 +7,6 @@ public class QemuVMData {
 
     public int id;
     public String node;
-    public String digest;
     public Integer acpi;
     public String agent;
     public String arch;
