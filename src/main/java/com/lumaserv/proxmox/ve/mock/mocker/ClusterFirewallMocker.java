@@ -44,7 +44,7 @@ public class ClusterFirewallMocker extends Mocker {
                     options.routerAdvertisement = request.getRouterAdvertisement() > 0;
                 return null;
             }).when(api).updateFirewallOptions(any(FirewallOptionsUpdateRequest.class));
-            
+
             /*
             Cluster Rules
              */
