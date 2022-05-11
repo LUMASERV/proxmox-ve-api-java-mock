@@ -1,5 +1,7 @@
 package com.lumaserv.proxmox.ve.mock.state;
 
+import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVMStatus;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -82,5 +84,4 @@ public class QemuVMData {
 
     public boolean started = false;
     public long startedAt = 0;
-
 }
