@@ -1,6 +1,8 @@
 package com.lumaserv.proxmox.ve.mock.state;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class QemuVMData {
@@ -79,6 +81,10 @@ public class QemuVMData {
     public final Map<Integer, String> unused = new HashMap();
     public final Map<Integer, String> usb = new HashMap();
     public final Map<Integer, String> virtio = new HashMap();
+
+    public FirewallOptionsData firewallOptions = new FirewallOptionsData();
+    public List<FirewallRuleData> firewallRules = new ArrayList<>();
+    public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();
 
     public boolean started = false;
     public long startedAt = 0;

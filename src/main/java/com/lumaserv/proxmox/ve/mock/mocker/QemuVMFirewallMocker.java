@@ -1,7 +1,7 @@
 package com.lumaserv.proxmox.ve.mock.mocker;
 
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
-import com.lumaserv.proxmox.ve.apis.ClusterAPI;
+import com.lumaserv.proxmox.ve.apis.QemuVMAPI;
 import com.lumaserv.proxmox.ve.mock.helper.FirewallHelper;
 import com.lumaserv.proxmox.ve.mock.state.*;
 import com.lumaserv.proxmox.ve.request.firewall.*;
@@ -11,33 +11,51 @@ import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.*;
 
-public class ClusterFirewallMocker extends Mocker {
+public class QemuVMFirewallMocker extends Mocker {
 
-    public static void mockClusterAPI(ClusterAPI api, MockState state) {
+    public static void mockQemuVMAPI(QemuVMAPI api, int id, MockState state) {
         try {
             /*
             Options
              */
-            when(api.getFirewallOptions()).then(i -> state.firewallOptions.toFirewallOptions());
+            when(api.getFirewallOptions()).then(i -> {
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                return qemuVMData.firewallOptions.toFirewallOptions();
+            });
             doAnswer(i -> {
                 FirewallOptionsUpdateRequest request = i.getArgument(0);
-                FirewallOptionsData options = state.firewallOptions;
-                FirewallHelper.updateOptions(options, request);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallHelper.updateOptions(qemuVMData.firewallOptions, request);
                 return null;
             }).when(api).updateFirewallOptions(any(FirewallOptionsUpdateRequest.class));
 
             /*
-            Cluster Rules
+            VM Rules
              */
             doAnswer(i -> {
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
                 FirewallRuleCreateRequest request = i.getArgument(0);
-                FirewallHelper.createRule(state.firewallRules, request, true);
+                FirewallHelper.createRule(qemuVMData.firewallRules, request, false);
                 return null;
             }).when(api).createFirewallRule(any(FirewallRuleCreateRequest.class));
-            when(api.getFirewallRules()).then(i -> state.firewallRules.stream().sorted(Comparator.comparingInt(r -> r.pos)).map(FirewallRuleData::toFirewallRule).collect(Collectors.toList()));
+            when(api.getFirewallRules()).then(i -> {
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                return qemuVMData.firewallRules.stream().sorted(Comparator.comparingInt(r -> r.pos)).map(FirewallRuleData::toFirewallRule).collect(Collectors.toList());
+            });
             when(api.getFirewallRule(anyInt())).then(i -> {
                 int pos = i.getArgument(0);
-                FirewallRuleData rule = state.firewallRules.stream().filter(r -> r.pos == pos).findFirst().orElse(null);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallRuleData rule = qemuVMData.firewallRules.stream().filter(r -> r.pos == pos).findFirst().orElse(null);
                 if(rule == null)
                     throwError(404, "Not Found");
                 return rule.toFirewallRule();
@@ -45,112 +63,54 @@ public class ClusterFirewallMocker extends Mocker {
             doAnswer(i -> {
                 int pos = i.getArgument(0);
                 FirewallRuleUpdateRequest request = i.getArgument(2);
-                FirewallHelper.updateRule(state.firewallRules, pos, request, true);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallHelper.updateRule(qemuVMData.firewallRules, pos, request, false);
                 return null;
             }).when(api).updateFirewallRule(anyInt(), any(FirewallRuleUpdateRequest.class));
             doAnswer(i -> {
                 int pos = i.getArgument(0);
-                FirewallHelper.deleteRule(state.firewallRules, pos);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallHelper.deleteRule(qemuVMData.firewallRules, pos);
                 return null;
             }).when(api).deleteFirewallRule(anyInt());
-
-            /*
-            Groups
-             */
-            doAnswer(i -> {
-                FirewallGroupCreateRequest request = i.getArgument(0);
-                if(state.firewallGroups.containsKey(request.getName()))
-                    throwError(400, "Group '" + request.getName() + "' already exists");
-                FirewallGroupData firewallGroupData = new FirewallGroupData();
-                firewallGroupData.name = request.getName();
-                firewallGroupData.comment = request.getComment();
-                state.firewallGroups.put(firewallGroupData.name, firewallGroupData);
-                return null;
-            }).when(api).createFirewallGroup(any(FirewallGroupCreateRequest.class));
-            when(api.getFirewallGroups()).then(i -> state.firewallGroups.values().stream().map(FirewallGroupData::toFirewallGroup).collect(Collectors.toList()));
-            doAnswer(i -> {
-                String name = i.getArgument(0);
-                FirewallGroupData group = state.firewallGroups.get(name);
-                if(group == null)
-                    throwError(404, "Not Found");
-                if(group.rules.size() > 0)
-                    throwError(409, "Group not empty");
-                state.firewallGroups.remove(name);
-                return null;
-            }).when(api).deleteFirewallGroup(anyString());
-
-            /*
-            Group Rules
-             */
-            doAnswer(i -> {
-                String groupName = i.getArgument(0);
-                FirewallRuleCreateRequest request = i.getArgument(1);
-                FirewallGroupData firewallGroupData = state.firewallGroups.get(groupName);
-                if(firewallGroupData == null)
-                    throwError(404, "Not Found");
-                FirewallHelper.createRule(firewallGroupData.rules, request, false);
-                return null;
-            }).when(api).createFirewallGroupRule(anyString(), any(FirewallRuleCreateRequest.class));
-            when(api.getFirewallGroupRules(anyString())).then(i -> {
-                String name = i.getArgument(0);
-                FirewallGroupData group = state.firewallGroups.get(name);
-                if(group == null)
-                    throwError(404, "Not Found");
-                return group.rules.stream().sorted(Comparator.comparingInt(r -> r.pos)).map(FirewallRuleData::toFirewallRule).collect(Collectors.toList());
-            });
-            when(api.getFirewallGroupRule(anyString(), anyInt())).then(i -> {
-                String name = i.getArgument(0);
-                int pos = i.getArgument(1);
-                FirewallGroupData group = state.firewallGroups.get(name);
-                if(group == null)
-                    throwError(404, "Not Found");
-                FirewallRuleData rule = group.rules.stream().filter(r -> r.pos == pos).findFirst().orElse(null);
-                if(rule == null)
-                    throwError(404, "Not Found");
-                return rule.toFirewallRule();
-            });
-            doAnswer(i -> {
-                String groupName = i.getArgument(0);
-                int pos = i.getArgument(1);
-                FirewallRuleUpdateRequest request = i.getArgument(2);
-                FirewallGroupData firewallGroupData = state.firewallGroups.get(groupName);
-                if(firewallGroupData == null)
-                    throwError(404, "Not Found");
-                FirewallHelper.updateRule(firewallGroupData.rules, pos, request, false);
-                return null;
-            }).when(api).updateFirewallGroupRule(anyString(), anyInt(), any(FirewallRuleUpdateRequest.class));
-            doAnswer(i -> {
-                String groupName = i.getArgument(0);
-                int pos = i.getArgument(1);
-                FirewallGroupData firewallGroupData = state.firewallGroups.get(groupName);
-                if(firewallGroupData == null)
-                    throwError(404, "Not Found");
-                FirewallHelper.deleteRule(firewallGroupData.rules, pos);
-                return null;
-            }).when(api).deleteFirewallGroupRule(anyString(), anyInt());
 
             /*
             IP Sets
              */
             doAnswer(i -> {
                 FirewallIPSetCreateRequest request = i.getArgument(0);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
                 if(state.firewallGroups.containsKey(request.getName()))
                     throwError(400, "IP Set '" + request.getName() + "' already exists");
                 FirewallIPSetData ipset = new FirewallIPSetData();
                 ipset.name = request.getName();
                 ipset.comment = request.getComment();
-                state.firewallIpSets.put(ipset.name, ipset);
+                qemuVMData.firewallIpSets.put(ipset.name, ipset);
                 return null;
             }).when(api).createFirewallIPSet(any(FirewallIPSetCreateRequest.class));
-            when(api.getFirewallIPSets()).then(i -> state.firewallIpSets.values().stream().map(FirewallIPSetData::toFirewallIPSet).collect(Collectors.toList()));
+            when(api.getFirewallIPSets()).then(i -> {
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                return qemuVMData.firewallIpSets.values().stream().map(FirewallIPSetData::toFirewallIPSet).collect(Collectors.toList());
+            });
             doAnswer(i -> {
                 String name = i.getArgument(0);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
                 FirewallIPSetData ipset = state.firewallIpSets.get(name);
                 if(ipset == null)
                     throwError(404, "Not Found");
                 if(ipset.entries.size() > 0)
                     throwError(409, "IP Set not empty");
-                state.firewallIpSets.remove(name);
+                qemuVMData.firewallIpSets.remove(name);
                 return null;
             }).when(api).deleteFirewallIPSet(anyString());
 
@@ -160,7 +120,10 @@ public class ClusterFirewallMocker extends Mocker {
             doAnswer(i -> {
                 String groupName = i.getArgument(0);
                 FirewallIPSetEntryCreateRequest request = i.getArgument(1);
-                FirewallIPSetData ipset = state.firewallIpSets.get(groupName);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallIPSetData ipset = qemuVMData.firewallIpSets.get(groupName);
                 if(ipset == null)
                     throwError(404, "Not Found");
                 verifyRequiredParam("cidr", request.getCidr());
@@ -177,7 +140,10 @@ public class ClusterFirewallMocker extends Mocker {
             }).when(api).createFirewallIPSetEntry(anyString(), any(FirewallIPSetEntryCreateRequest.class));
             when(api.getFirewallIPSetEntries(anyString())).then(i -> {
                 String name = i.getArgument(0);
-                FirewallIPSetData ipset = state.firewallIpSets.get(name);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallIPSetData ipset = qemuVMData.firewallIpSets.get(name);
                 if(ipset == null)
                     throwError(404, "Not Found");
                 return ipset.entries.values().stream().map(FirewallIPSetEntryData::toFirewallIPSetEntry).collect(Collectors.toList());
@@ -185,7 +151,10 @@ public class ClusterFirewallMocker extends Mocker {
             when(api.getFirewallIPSetEntry(anyString(), anyString())).then(i -> {
                 String name = i.getArgument(0);
                 String cidr = i.getArgument(1);
-                FirewallIPSetData ipset = state.firewallIpSets.get(name);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallIPSetData ipset = qemuVMData.firewallIpSets.get(name);
                 if(ipset == null)
                     throwError(404, "Not Found");
                 FirewallIPSetEntryData entry = ipset.entries.get(cidr);
@@ -196,8 +165,11 @@ public class ClusterFirewallMocker extends Mocker {
             doAnswer(i -> {
                 String name = i.getArgument(0);
                 String cidr = i.getArgument(1);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
                 FirewallIPSetEntryUpdateRequest request = i.getArgument(2);
-                FirewallIPSetData ipset = state.firewallIpSets.get(name);
+                FirewallIPSetData ipset = qemuVMData.firewallIpSets.get(name);
                 if(ipset == null)
                     throwError(404, "Not Found");
                 FirewallIPSetEntryData entry = ipset.entries.get(cidr);
@@ -212,7 +184,10 @@ public class ClusterFirewallMocker extends Mocker {
             doAnswer(i -> {
                 String name = i.getArgument(0);
                 String cidr = i.getArgument(1);
-                FirewallIPSetData ipset = state.firewallIpSets.get(name);
+                QemuVMData qemuVMData = state.qemuVMs.get(id);
+                if(qemuVMData == null)
+                    throwError(404, "Not Found");
+                FirewallIPSetData ipset = qemuVMData.firewallIpSets.get(name);
                 if(ipset == null)
                     throwError(404, "Not Found");
                 if(!ipset.entries.containsKey(cidr))
@@ -221,9 +196,5 @@ public class ClusterFirewallMocker extends Mocker {
             }).when(api).deleteFirewallIPSetEntry(anyString(), anyString());
         } catch (ProxMoxVEException ignored) {}
     }
-
-
-
-
 
 }

@@ -2,7 +2,9 @@ package com.lumaserv.proxmox.ve.mock.helper;
 
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.mock.mocker.Mocker;
+import com.lumaserv.proxmox.ve.mock.state.FirewallOptionsData;
 import com.lumaserv.proxmox.ve.mock.state.FirewallRuleData;
+import com.lumaserv.proxmox.ve.request.firewall.FirewallOptionsUpdateRequest;
 import com.lumaserv.proxmox.ve.request.firewall.FirewallRuleCreateRequest;
 import com.lumaserv.proxmox.ve.request.firewall.FirewallRuleUpdateRequest;
 
@@ -13,6 +15,29 @@ import java.util.regex.Pattern;
 public class FirewallHelper extends Mocker {
 
     private static final Pattern NAME_PATTERN = Pattern.compile("[A-Za-z][A-Za-z0-9-_]+");
+
+    public static void updateOptions(FirewallOptionsData options, FirewallOptionsUpdateRequest request) {
+        if(request.getDhcp() != null)
+            options.dhcp = request.getDhcp() > 0;
+        if(request.getEnable() != null)
+            options.enable = request.getEnable() > 0;
+        if(request.getIpFilter() != null)
+            options.ipFilter = request.getIpFilter() > 0;
+        if(request.getLogLevelIn() != null)
+            options.logLevelIn = request.getLogLevelIn();
+        if(request.getLogLevelOut() != null)
+            options.logLevelOut = request.getLogLevelOut();
+        if(request.getMacFilter() != null)
+            options.macFilter = request.getMacFilter() > 0;
+        if(request.getNdp() != null)
+            options.ndp = request.getNdp() > 0;
+        if(request.getPolicyIn() != null)
+            options.policyIn = request.getPolicyIn();
+        if(request.getPolicyOut() != null)
+            options.policyOut = request.getPolicyOut();
+        if(request.getRouterAdvertisement() != null)
+            options.routerAdvertisement = request.getRouterAdvertisement() > 0;
+    }
 
     public static void createRule(List<FirewallRuleData> rules, FirewallRuleCreateRequest request, boolean allowGroup) throws ProxMoxVEException {
         verifyRequiredParam("action", request.getAction());

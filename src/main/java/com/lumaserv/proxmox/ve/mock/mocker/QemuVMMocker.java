@@ -121,6 +121,7 @@ public class QemuVMMocker extends Mocker {
                 return "";
             }).when(api).resize(any(QemuVMResizeRequest.class));
         } catch (ProxMoxVEException ignored) {}
+        QemuVMFirewallMocker.mockQemuVMAPI(api, id, state);
         return null;
     }
 
