@@ -3,15 +3,14 @@ package com.lumaserv.proxmox.ve.mock.mocker;
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.NodeAPI;
 import com.lumaserv.proxmox.ve.apis.QemuVMAPI;
+import com.lumaserv.proxmox.ve.mock.helper.DiskHelper;
 import com.lumaserv.proxmox.ve.mock.state.*;
-import com.lumaserv.proxmox.ve.mock.state.qemu.DiskData;
-import com.lumaserv.proxmox.ve.mock.state.qemu.IPConfigData;
-import com.lumaserv.proxmox.ve.mock.state.qemu.NetworkData;
-import com.lumaserv.proxmox.ve.mock.state.qemu.QemuVMData;
+import com.lumaserv.proxmox.ve.mock.state.qemu.*;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVM;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVMConfig;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.*;
 
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.*;
@@ -239,7 +238,7 @@ public class QemuVMMocker extends Mocker {
             when(api.getConfig(any(QemuVMConfigGetRequest.class))).then(i -> {
                 //QemuVMConfigGetRequest request = i.getArgument(0);
                 QemuVMData data = getVMData(state, id);
-                return new QemuVMConfig()
+                QemuVMConfig config = new QemuVMConfig()
                         .setAcpi(data.acpi)
                         .setAgent(data.agent)
                         .setArch(data.arch)
@@ -300,6 +299,27 @@ public class QemuVMMocker extends Mocker {
                         .setVmGenId(data.vmGenId)
                         .setVmStateStorage(data.vmStateStorage)
                         .setWatchdog(data.watchdog);
+                for(String k : data.disks.keySet()) {
+                    DiskData diskData = data.disks.get(k);
+                    if(k.startsWith("scsi")) {
+                        config.getScsi().put(Integer.parseInt(k.substring(4)), diskData.toOptionsString(state));
+                    } else if(k.startsWith("sata")) {
+                        config.getSata().put(Integer.parseInt(k.substring(4)), diskData.toOptionsString(state));
+                    } else if(k.startsWith("ide")) {
+                        config.getIde().put(Integer.parseInt(k.substring(3)), diskData.toOptionsString(state));
+                    } else if(k.startsWith("virtio")) {
+                        config.getVirtio().put(Integer.parseInt(k.substring(6)), diskData.toOptionsString(state));
+                    }
+                }
+                for(Integer n : data.networks.keySet()) {
+                    NetworkData networkData = data.networks.get(n);
+                    config.getNet().put(n, networkData.toOptionString());
+                }
+                for(Integer n : data.ipConfigs.keySet()) {
+                    IPConfigData ipConfigData = data.ipConfigs.get(n);
+                    config.getNet().put(n, ipConfigData.toOptionString());
+                }
+                return config;
             });
             when(api.getCurrentConfig()).then(i -> api.getConfig(new QemuVMConfigGetRequest().setCurrent(true)));
             doAnswer(i -> {
@@ -435,12 +455,28 @@ public class QemuVMMocker extends Mocker {
                 return task.upId;
             });
             doAnswer(i -> {
-                //QemuVMResizeRequest request = i.getArgument(0);
+                QemuVMResizeRequest request = i.getArgument(0);
+                verifyRequiredParam("disk", request.getDisk());
+                verifyRequiredParam("size", request.getSize());
                 QemuVMData data = state.qemuVMs.get(id);
                 if(data == null)
                     throwError(404, "Not Found");
-                // TODO
-                return "";
+                DiskData diskData = data.disks.get(request.getDisk());
+                if(diskData == null || diskData.cdrom)
+                    throwError(400, "Unknown disk");
+                StorageData storage = state.storages.get(diskData.storage);
+                VolumeData volumeData = storage.images.get(diskData.volume);
+                TaskData task = state.createTask(data.node, "qmresize", data.id);
+                if(request.getSize().startsWith("+")) {
+                    volumeData.size = volumeData.size + DiskHelper.parseSize(request.getSize().substring(1));
+                } else {
+                    double s = DiskHelper.parseSize(request.getSize());
+                    if(s < volumeData.size)
+                        throwError(400, "Size is smaller than current size");
+                    volumeData.size = s;
+                }
+                task.finish();
+                return task.upId;
             }).when(api).resize(any(QemuVMResizeRequest.class));
         } catch (ProxMoxVEException ignored) {}
         QemuVMFirewallMocker.mockQemuVMAPI(api, id, state);

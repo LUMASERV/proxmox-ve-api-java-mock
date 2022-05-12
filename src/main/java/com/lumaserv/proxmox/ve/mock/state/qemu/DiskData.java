@@ -1,6 +1,7 @@
 package com.lumaserv.proxmox.ve.mock.state.qemu;
 
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
+import com.lumaserv.proxmox.ve.mock.helper.DiskHelper;
 import com.lumaserv.proxmox.ve.mock.mocker.Mocker;
 import com.lumaserv.proxmox.ve.mock.state.MockState;
 import com.lumaserv.proxmox.ve.mock.state.StorageData;
@@ -62,7 +63,6 @@ public class DiskData {
                         String path = options.get("path").split(":", 2)[1];
                         Matcher matcher = VOLUME_SIZE_PATTERN.matcher(path);
                         if(matcher.matches()) {
-                            int size = Integer.parseInt(matcher.group(1));
                             String format = options.getOrDefault("format", "qcow2");
                             switch (format) {
                                 case "raw":
@@ -71,7 +71,7 @@ public class DiskData {
                                 default:
                                     Mocker.throwError(400, "Parameter '" + k + "' has invalid option format");
                             }
-                            volume = storageData.createImage(size, matcher.group(2), vmId, format);
+                            volume = storageData.createImage(path, vmId, format);
                         } else {
                             if(!storageData.images.containsKey(path))
                                 Mocker.throwError(400, "Parameter '" + k + "' has invalid option path (volume not found)");
@@ -147,7 +147,7 @@ public class DiskData {
         if(cdrom) {
             if(volume != null) {
                 options.put("path", storage + ":" + volume);
-                options.put("size", state.storages.get(storage).isos.get(volume).sizeFormatted());
+                options.put("size", DiskHelper.sizeToString(state.storages.get(storage).isos.get(volume).size));
             } else {
                 options.put("path", storage);
             }
@@ -155,7 +155,7 @@ public class DiskData {
             return OptionStringUtil.buildOptionString(options, "path");
         }
         options.put("path", storage + ":" + volume);
-        options.put("size", state.storages.get(storage).images.get(volume).sizeFormatted());
+        options.put("size", DiskHelper.sizeToString(state.storages.get(storage).images.get(volume).size));
         if(cache != null)
             options.put("cache", cache);
         if(discard)
