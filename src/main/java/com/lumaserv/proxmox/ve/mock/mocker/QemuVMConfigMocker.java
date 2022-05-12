@@ -171,6 +171,7 @@ public class QemuVMConfigMocker extends Mocker {
                 task.finish();
                 return task.upId;
             });
+            when(api.getSnapshotConfig(anyString())).then(i -> api.getConfig());
         } catch (ProxMoxVEException ignored) {}
     }
 

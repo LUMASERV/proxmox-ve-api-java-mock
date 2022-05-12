@@ -224,9 +224,7 @@ public class QemuVMMocker extends Mocker {
                 QemuVMResizeRequest request = i.getArgument(0);
                 verifyRequiredParam("disk", request.getDisk());
                 verifyRequiredParam("size", request.getSize());
-                QemuVMData data = state.qemuVMs.get(id);
-                if(data == null)
-                    throwError(404, "Not Found");
+                QemuVMData data = getVMData(state, id);
                 DiskData diskData = data.disks.get(request.getDisk());
                 if(diskData == null || diskData.cdrom)
                     throwError(400, "Unknown disk");
@@ -244,6 +242,22 @@ public class QemuVMMocker extends Mocker {
                 task.finish();
                 return task.upId;
             }).when(api).resize(any(QemuVMResizeRequest.class));
+            when(api.moveDisk(any(QemuVMMoveDiskRequest.class))).then(i -> {
+                QemuVMMoveDiskRequest request = i.getArgument(0);
+                verifyRequiredParam("disk", request.getDisk());
+                QemuVMData data = getVMData(state, id);
+                DiskData diskData = data.disks.get(request.getDisk());
+                if (diskData == null)
+                    throwError(400, "Unknown disk");
+                if (request.getTargetDisk() == null || request.getTargetVMId() == null)
+                    throwError(409, "No target"); // TODO: Check if other cases could apply here
+                QemuVMData targetVM = getVMData(state, request.getTargetVMId());
+                TaskData task = state.createTask(data.node, "qmmovedisk", data.id);
+                data.disks.remove(request.getDisk());
+                targetVM.disks.put(request.getTargetDisk(), diskData);
+                task.finish();
+                return task.upId;
+            });
         } catch (ProxMoxVEException ignored) {}
         QemuVMConfigMocker.mockQemuVMAPI(api, id, state);
         QemuVMFirewallMocker.mockQemuVMAPI(api, id, state);
