@@ -265,12 +265,11 @@ public class QemuVMMocker extends Mocker {
     }
 
     public static QemuVM mockQemuVM(QemuVMData data) {
-        QemuVM vm = new QemuVM()
+        return new QemuVM()
                 .setId(data.id)
                 .setName(data.name)
                 .setStatus(data.started ? "running" : "stopped")
                 .setUptime(data.started ? ((int)((System.currentTimeMillis() - data.startedAt) / 1000)) : null);
-        return vm;
     }
 
     private static String vmAlreadyRunningMsg(int id) {

@@ -35,10 +35,10 @@ public class QemuVMData {
     public String searchDomain;
     public String sshKeys;
     public String startup;
-    public final Map<Integer, IPConfigData> ipConfigs = new HashMap();
-    public final Map<Integer, NetworkData> networks = new HashMap();
-    public final Map<String, DiskData> disks = new HashMap();
-    public final Map<Integer, String> unused = new HashMap();
+    public final Map<Integer, IPConfigData> ipConfigs = new HashMap<>();
+    public final Map<Integer, NetworkData> networks = new HashMap<>();
+    public final Map<String, DiskData> disks = new HashMap<>();
+    public final Map<Integer, String> unused = new HashMap<>();
     public FirewallOptionsData firewallOptions = new FirewallOptionsData();
     public List<FirewallRuleData> firewallRules = new ArrayList<>();
     public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();
