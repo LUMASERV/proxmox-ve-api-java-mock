@@ -1,4 +1,8 @@
-package com.lumaserv.proxmox.ve.mock.state;
+package com.lumaserv.proxmox.ve.mock.state.qemu;
+
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallIPSetData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallOptionsData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallRuleData;
 
 import java.util.ArrayList;
 
@@ -72,17 +76,13 @@ public class QemuVMData {
     public String watchdog;
     public final Map<Integer, String> hostPci = new HashMap();
     public final Map<Integer, String> ide = new HashMap();
-    public final Map<Integer, String> ipConfig = new HashMap();
-    public final Map<Integer, String> net = new HashMap();
-    public final Map<Integer, String> numas = new HashMap();
-    public final Map<Integer, String> parallel = new HashMap();
-    public final Map<Integer, String> sata = new HashMap();
-    public final Map<Integer, String> scsi = new HashMap();
+    public final Map<Integer, IPConfigData> ipConfigs = new HashMap();
+    public final Map<Integer, NetworkData> networks = new HashMap();
+    public final Map<String, DiskData> disks = new HashMap();
     public final Map<Integer, String> serial = new HashMap();
     public final Map<Integer, String> unused = new HashMap();
     public final Map<Integer, String> usb = new HashMap();
     public final Map<Integer, String> virtio = new HashMap();
-
     public FirewallOptionsData firewallOptions = new FirewallOptionsData();
     public List<FirewallRuleData> firewallRules = new ArrayList<>();
     public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();

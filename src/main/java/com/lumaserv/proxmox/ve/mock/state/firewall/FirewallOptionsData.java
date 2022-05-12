@@ -1,4 +1,4 @@
-package com.lumaserv.proxmox.ve.mock.state;
+package com.lumaserv.proxmox.ve.mock.state.firewall;
 
 import com.lumaserv.proxmox.ve.model.firewall.FirewallOptions;
 import com.lumaserv.proxmox.ve.model.firewall.FirewallRule;

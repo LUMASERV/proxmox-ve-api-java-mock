@@ -3,10 +3,11 @@ package com.lumaserv.proxmox.ve.mock.mocker;
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.NodeAPI;
 import com.lumaserv.proxmox.ve.apis.QemuVMAPI;
-import com.lumaserv.proxmox.ve.mock.state.MockState;
-import com.lumaserv.proxmox.ve.mock.state.NodeData;
-import com.lumaserv.proxmox.ve.mock.state.QemuVMData;
-import com.lumaserv.proxmox.ve.mock.state.TaskData;
+import com.lumaserv.proxmox.ve.mock.state.*;
+import com.lumaserv.proxmox.ve.mock.state.qemu.DiskData;
+import com.lumaserv.proxmox.ve.mock.state.qemu.IPConfigData;
+import com.lumaserv.proxmox.ve.mock.state.qemu.NetworkData;
+import com.lumaserv.proxmox.ve.mock.state.qemu.QemuVMData;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVM;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVMConfig;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.*;
@@ -30,6 +31,50 @@ public class QemuVMMocker extends Mocker {
                 QemuVMData data = new QemuVMData();
                 data.node = nodeAPI.getNodeName();
                 data.id = request.getId();
+                for(String k : request.getAdditionalParameters().keys()) {
+                    if(k.startsWith("scsi")) {
+                        int n = Integer.parseInt(k.substring(4));
+                        if(n < 31) {
+                            data.disks.put(k, new DiskData(data.id, k, request.getAdditionalParameters().string(k), state));
+                            continue;
+                        }
+                    }
+                    if(k.startsWith("sata")) {
+                        int n = Integer.parseInt(k.substring(4));
+                        if(n < 6) {
+                            data.disks.put(k, new DiskData(data.id, k, request.getAdditionalParameters().string(k), state));
+                            continue;
+                        }
+                    }
+                    if(k.startsWith("virtio")) {
+                        int n = Integer.parseInt(k.substring(6));
+                        if(n < 16) {
+                            data.disks.put(k, new DiskData(data.id, k, request.getAdditionalParameters().string(k), state));
+                            continue;
+                        }
+                    }
+                    if(k.startsWith("ide")) {
+                        int n = Integer.parseInt(k.substring(4));
+                        if(n < 31) {
+                            data.disks.put(k, new DiskData(data.id, k, request.getAdditionalParameters().string(k), state));
+                            continue;
+                        }
+                    }
+                    if(k.startsWith("net")) {
+                        int n = Integer.parseInt(k.substring(3));
+                        if(n < 32) {
+                            data.networks.put(n, new NetworkData(n, request.getAdditionalParameters().string(k), state));
+                            continue;
+                        }
+                    }
+                    if(k.startsWith("ipconfig")) {
+                        int n = Integer.parseInt(k.substring(8));
+                        if(n < 32) {
+                            data.ipConfigs.put(n, new IPConfigData(n, request.getAdditionalParameters().string(k)));
+                            continue;
+                        }
+                    }
+                }
                 // TODO
                 state.qemuVMs.put(data.id, data);
                 return "";

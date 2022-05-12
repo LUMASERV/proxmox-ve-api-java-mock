@@ -1,5 +1,11 @@
 package com.lumaserv.proxmox.ve.mock.state;
 
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallGroupData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallIPSetData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallOptionsData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallRuleData;
+import com.lumaserv.proxmox.ve.mock.state.qemu.QemuVMData;
+
 import java.util.*;
 
 public class MockState {
@@ -11,6 +17,7 @@ public class MockState {
     public List<TaskData> tasks = new ArrayList<>();
     public Map<String, SDNZoneData> sdnZones = new HashMap<>();
     public Map<String, SDNVNetData> sdnVNets = new HashMap<>();
+    public Map<String, StorageData> storages = new HashMap<>();
     public List<FirewallRuleData> firewallRules = new ArrayList<>();
     public Map<String, FirewallGroupData> firewallGroups = new HashMap<>();
     public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();

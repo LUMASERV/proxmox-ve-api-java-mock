@@ -4,6 +4,7 @@ import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.ClusterAPI;
 import com.lumaserv.proxmox.ve.mock.helper.FirewallHelper;
 import com.lumaserv.proxmox.ve.mock.state.*;
+import com.lumaserv.proxmox.ve.mock.state.firewall.*;
 import com.lumaserv.proxmox.ve.request.firewall.*;
 
 import java.util.Comparator;

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 public abstract class Mocker {
 
-    protected static void throwError(int status, String message) throws ProxMoxVEException {
+    public static void throwError(int status, String message) throws ProxMoxVEException {
         throw new ProxMoxVEException(mockHTTPResponse(status, message));
     }
 

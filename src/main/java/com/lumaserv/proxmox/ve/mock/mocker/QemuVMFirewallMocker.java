@@ -4,6 +4,10 @@ import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.QemuVMAPI;
 import com.lumaserv.proxmox.ve.mock.helper.FirewallHelper;
 import com.lumaserv.proxmox.ve.mock.state.*;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallIPSetData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallIPSetEntryData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallRuleData;
+import com.lumaserv.proxmox.ve.mock.state.qemu.QemuVMData;
 import com.lumaserv.proxmox.ve.request.firewall.*;
 
 import java.util.Comparator;

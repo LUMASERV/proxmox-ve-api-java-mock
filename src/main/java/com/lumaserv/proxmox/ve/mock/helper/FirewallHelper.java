@@ -2,8 +2,8 @@ package com.lumaserv.proxmox.ve.mock.helper;
 
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.mock.mocker.Mocker;
-import com.lumaserv.proxmox.ve.mock.state.FirewallOptionsData;
-import com.lumaserv.proxmox.ve.mock.state.FirewallRuleData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallOptionsData;
+import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallRuleData;
 import com.lumaserv.proxmox.ve.request.firewall.FirewallOptionsUpdateRequest;
 import com.lumaserv.proxmox.ve.request.firewall.FirewallRuleCreateRequest;
 import com.lumaserv.proxmox.ve.request.firewall.FirewallRuleUpdateRequest;
