@@ -51,4 +51,12 @@ public class MockState {
         return nodeData;
     }
 
+    public StorageData createStorage(String type, String name) {
+        StorageData storageData = new StorageData();
+        storageData.name = name;
+        storageData.type = type;
+        storages.put(name, storageData);
+        return storageData;
+    }
+
 }

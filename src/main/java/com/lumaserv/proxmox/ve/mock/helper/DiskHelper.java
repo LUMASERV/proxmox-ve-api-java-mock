@@ -31,14 +31,14 @@ public class DiskHelper {
 
     public static String sizeToString(double size) {
         if(size < (1./1024))
-            return (size * 1048576) + "K";
+            return ((int) (size * 1048576)) + "K";
         if(size < 1)
-            return (size * 1024) + "M";
+            return ((int) (size * 1024)) + "M";
         if(size >= 1048576)
-            return (size / 1048576) + "P";
+            return ((int) (size / 1048576)) + "P";
         if(size >= 1024)
-            return (size / 1024) + "T";
-        return size + "G";
+            return ((int) (size / 1024)) + "T";
+        return ((int) size) + "G";
     }
 
 }

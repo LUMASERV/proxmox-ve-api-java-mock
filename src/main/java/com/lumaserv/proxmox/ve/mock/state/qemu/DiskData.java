@@ -14,7 +14,7 @@ import java.util.regex.Pattern;
 
 public class DiskData {
 
-    private static final Pattern VOLUME_SIZE_PATTERN = Pattern.compile("([0-9])([KkMmGgTtPp]?)");
+    private static final Pattern VOLUME_SIZE_PATTERN = Pattern.compile("([0-9]+)([KkMmGgTtPp]?)");
 
     public String storage;
     public String volume;
@@ -146,7 +146,7 @@ public class DiskData {
         Map<String, String> options = new HashMap<>();
         if(cdrom) {
             if(volume != null) {
-                options.put("path", storage + ":" + volume);
+                options.put("path", storage + ":iso/" + volume);
                 options.put("size", DiskHelper.sizeToString(state.storages.get(storage).isos.get(volume).size));
             } else {
                 options.put("path", storage);

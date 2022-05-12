@@ -10,6 +10,7 @@ import java.util.Map;
 public class StorageData {
 
     public String name;
+    public String type;
     public Map<String, VolumeData> images = new HashMap<>();
     public Map<String, VolumeData> isos = new HashMap<>();
     public Map<String, VolumeData> snippets = new HashMap<>();
@@ -26,7 +27,7 @@ public class StorageData {
         volumeData.name = namePrefix + n;
         volumeData.format = format;
         volumeData.size = size;
-        images.put(name, volumeData);
+        images.put(volumeData.name, volumeData);
         return volumeData.name;
     }
 
