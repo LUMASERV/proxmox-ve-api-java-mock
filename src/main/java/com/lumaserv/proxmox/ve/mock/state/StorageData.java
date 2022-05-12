@@ -3,9 +3,7 @@ package com.lumaserv.proxmox.ve.mock.state;
 import com.lumaserv.proxmox.ve.mock.helper.DiskHelper;
 import com.lumaserv.proxmox.ve.mock.state.qemu.VolumeData;
 
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class StorageData {
 
@@ -31,4 +29,12 @@ public class StorageData {
         return volumeData.name;
     }
 
+    public Map<String, VolumeData> getVolumes () {
+        Map<String, VolumeData> volumes = new HashMap<>();
+        volumes.putAll(images);
+        volumes.putAll(isos);
+        volumes.putAll(snippets);
+        volumes.putAll(backups);
+        return volumes;
+    }
 }
