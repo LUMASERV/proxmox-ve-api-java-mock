@@ -1,6 +1,7 @@
 package com.lumaserv.proxmox.ve.mock.state;
 
 import com.lumaserv.proxmox.ve.model.sdn.SDNVNet;
+import org.javawebstack.abstractdata.mapper.annotation.MapperOptions;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ public class SDNVNetData {
     public Integer tag;
     public String type;
     public String alias;
+    @MapperOptions(generic = SDNSubnetData.class)
     public List<SDNSubnetData> subnets;
 
     public SDNVNet toSDNVNet() {

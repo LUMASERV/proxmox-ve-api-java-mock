@@ -9,13 +9,15 @@ import com.lumaserv.proxmox.ve.mock.state.qemu.*;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVM;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.*;
 
+import java.util.ArrayList;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.*;
 
 public class QemuVMMocker extends Mocker {
 
-    public static void mockNodeAPI(NodeAPI nodeAPI, MockState state) {
+    public static void mockNodeAPI(NodeAPI nodeAPI, MockState state, Consumer<MockState> onChange) {
         try {
             when(nodeAPI.getQemuVMs()).then(i -> state.qemuVMs.values().stream().map(QemuVMMocker::mockQemuVM).collect(Collectors.toList()));
             when(nodeAPI.createQemuVM(any(QemuVMCreateRequest.class))).then(i -> {
@@ -74,13 +76,14 @@ public class QemuVMMocker extends Mocker {
                 }
                 // TODO
                 state.qemuVMs.put(data.id, data);
+                onChange.accept(state);
                 return "";
             });
-            when(nodeAPI.qemu(anyInt())).then(i -> mockQemuVMAPI(nodeAPI, state, i.getArgument(0)));
+            when(nodeAPI.qemu(anyInt())).then(i -> mockQemuVMAPI(nodeAPI, state, i.getArgument(0), onChange));
         } catch (ProxMoxVEException ignored) {}
     }
 
-    private static QemuVMAPI mockQemuVMAPI(NodeAPI nodeAPI, MockState state, int id) {
+    private static QemuVMAPI mockQemuVMAPI(NodeAPI nodeAPI, MockState state, int id, Consumer<MockState> onChange) {
         QemuVMAPI api = mock(QemuVMAPI.class);
         try {
             when(api.getNodeAPI()).thenReturn(nodeAPI);
@@ -95,6 +98,7 @@ public class QemuVMMocker extends Mocker {
                 data.startedAt = System.currentTimeMillis();
                 data.started = true;
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.shutdown()).then(i -> api.shutdown((Integer) null));
@@ -108,6 +112,7 @@ public class QemuVMMocker extends Mocker {
                 data.startedAt = 0;
                 data.started = false;
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.stop()).then(i -> api.stop(new QemuVMStopRequest()));
@@ -120,6 +125,7 @@ public class QemuVMMocker extends Mocker {
                 data.startedAt = 0;
                 data.started = false;
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.reboot()).then(i -> api.reboot((Integer) null));
@@ -132,6 +138,7 @@ public class QemuVMMocker extends Mocker {
                 TaskData task = state.createTask(data.node, "qmreboot", data.id);
                 data.startedAt = System.currentTimeMillis();
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.delete(any(QemuVMDeleteRequest.class))).then(i -> {
@@ -144,6 +151,8 @@ public class QemuVMMocker extends Mocker {
                 state.qemuVMs.remove(data.id);
                 task.log.add("Removing image: 100% complete...done.");
                 task.finish();
+                state.pools.forEach((n, pool) -> pool.members.removeIf(member -> (member.vmId != null) && (member.vmId == id)));
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.reset()).then(i -> api.reset(new QemuVMResetRequest()));
@@ -154,6 +163,7 @@ public class QemuVMMocker extends Mocker {
                 TaskData task = state.createTask(data.node, "qmreset", data.id);
                 data.startedAt = System.currentTimeMillis();
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.suspend()).then(i -> api.suspend(new QemuVMSuspendRequest()));
@@ -165,6 +175,7 @@ public class QemuVMMocker extends Mocker {
                 data.started = false;
                 data.lock = "suspended";
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.resume()).then(i -> api.resume(new QemuVMResumeRequest()));
@@ -178,6 +189,7 @@ public class QemuVMMocker extends Mocker {
                 data.started = true;
                 data.lock = "";
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.clone(any(QemuVMCloneRequest.class))).then(i -> {
@@ -289,6 +301,7 @@ public class QemuVMMocker extends Mocker {
                 }
                 state.qemuVMs.put(request.getNewId(), newData);
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             doAnswer(i -> {
@@ -311,6 +324,7 @@ public class QemuVMMocker extends Mocker {
                     volumeData.size = s;
                 }
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             }).when(api).resize(any(QemuVMResizeRequest.class));
             doAnswer(i -> {
@@ -381,6 +395,7 @@ public class QemuVMMocker extends Mocker {
                 }
                 QemuVMData targetVM = state.qemuVMs.get(newVMId);
                 targetVM.disks.put(request.getTargetDisk() != null ? request.getTargetDisk() : request.getDisk(), newDiskData);
+                onChange.accept(state);
                 return null;
             }).when(api).moveDisk(any(QemuVMMoveDiskRequest.class));
             when(api.migrate(any(QemuVMMigrateRequest.class))).then(i -> {
@@ -396,11 +411,12 @@ public class QemuVMMocker extends Mocker {
                 TaskData task = state.createTask(data.node, "qmigrate", data.id);
                 data.node = request.getTarget();
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
         } catch (ProxMoxVEException ignored) {}
-        QemuVMConfigMocker.mockQemuVMAPI(api, id, state);
-        QemuVMFirewallMocker.mockQemuVMAPI(api, id, state);
+        QemuVMConfigMocker.mockQemuVMAPI(api, id, state, onChange);
+        QemuVMFirewallMocker.mockQemuVMAPI(api, id, state, onChange);
         return api;
     }
 

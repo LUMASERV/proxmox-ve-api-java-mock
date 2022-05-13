@@ -8,6 +8,7 @@ import com.lumaserv.proxmox.ve.model.pools.Pool;
 import com.lumaserv.proxmox.ve.request.pools.PoolCreateRequest;
 import com.lumaserv.proxmox.ve.request.pools.PoolUpdateRequest;
 
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -15,7 +16,7 @@ import static org.mockito.Mockito.*;
 
 public class PoolMocker extends Mocker {
 
-    public static void mockClient(ProxMoxVEClient client, MockState state) {
+    public static void mockClient(ProxMoxVEClient client, MockState state, Consumer<MockState> onChange) {
         try {
             when(client.getPools()).then(i -> state.pools.values().stream().map(PoolMocker::mockPool).collect(Collectors.toList()));
             when(client.getPool(anyString())).then(i -> {
@@ -41,6 +42,7 @@ public class PoolMocker extends Mocker {
                 data.id = request.getId();
                 data.comment = request.getComment();
                 state.pools.put(data.id, data);
+                onChange.accept(state);
                 return null;
             }).when(client).createPool(any(PoolCreateRequest.class));
             doAnswer(i -> {
@@ -55,8 +57,10 @@ public class PoolMocker extends Mocker {
                     if(request.getVMs() != null && request.getVMs().length() > 0) {
                         Integer[] vmids = Stream.of(request.getVMs().split(",")).map(Integer::parseInt).toArray(Integer[]::new);
                         for(int vmid : vmids) {
-                            if(poolData.members.stream().noneMatch(m -> m.type.equals("vm") && m.vmId == vmid))
+                            if(poolData.members.stream().noneMatch(m -> m.type.equals("vm") && m.vmId == vmid)) {
+                                onChange.accept(state);
                                 throwError(409, "VM not in pool");
+                            }
                         }
                         for(int vmid : vmids) {
                             PoolData.Member member = poolData.members.stream().filter(m -> m.type.equals("vm") && m.vmId == vmid).findFirst().get();
@@ -66,8 +70,10 @@ public class PoolMocker extends Mocker {
                     if(request.getStorages() != null && request.getStorages().length() > 0) {
                         String[] storageIds = request.getStorages().split(",");
                         for(String storageId : storageIds) {
-                            if(poolData.members.stream().noneMatch(m -> m.type.equals("storage") && m.name.equals(storageId)))
+                            if(poolData.members.stream().noneMatch(m -> m.type.equals("storage") && m.name.equals(storageId))) {
+                                onChange.accept(state);
                                 throwError(409, "Storage not in pool");
+                            }
                         }
                         for(String storageId : storageIds) {
                             PoolData.Member member = poolData.members.stream().filter(m -> m.type.equals("storage") && m.name.equals(storageId)).findFirst().get();
@@ -78,8 +84,10 @@ public class PoolMocker extends Mocker {
                     if(request.getVMs() != null && request.getVMs().length() > 0) {
                         Integer[] vmids = Stream.of(request.getVMs().split(",")).map(Integer::parseInt).toArray(Integer[]::new);
                         for(int vmid : vmids) {
-                            if(poolData.members.stream().anyMatch(m -> m.type.equals("vm") && m.vmId == vmid))
+                            if(poolData.members.stream().anyMatch(m -> m.type.equals("vm") && m.vmId == vmid)) {
+                                onChange.accept(state);
                                 throwError(409, "VM already in pool");
+                            }
                         }
                         for(int vmid : vmids) {
                             PoolData.Member member = new PoolData.Member();
@@ -92,8 +100,10 @@ public class PoolMocker extends Mocker {
                     if(request.getStorages() != null && request.getStorages().length() > 0) {
                         String[] storageIds = request.getStorages().split(",");
                         for(String storageId : storageIds) {
-                            if(poolData.members.stream().anyMatch(m -> m.type.equals("storage") && m.name.equals(storageId)))
+                            if(poolData.members.stream().anyMatch(m -> m.type.equals("storage") && m.name.equals(storageId))) {
+                                onChange.accept(state);
                                 throwError(409, "Storage already in pool");
+                            }
                         }
                         for(String storageId : storageIds) {
                             PoolData.Member member = new PoolData.Member();
@@ -103,6 +113,7 @@ public class PoolMocker extends Mocker {
                         }
                     }
                 }
+                onChange.accept(state);
                 return null;
             }).when(client).updatePool(anyString(), any(PoolUpdateRequest.class));
             doAnswer(i -> {
@@ -110,6 +121,7 @@ public class PoolMocker extends Mocker {
                 if(!state.pools.containsKey(id))
                     throwError(404, "Not Found");
                 state.pools.remove(id);
+                onChange.accept(state);
                 return null;
             }).when(client).deletePool(anyString());
         } catch (ProxMoxVEException ignored) {}

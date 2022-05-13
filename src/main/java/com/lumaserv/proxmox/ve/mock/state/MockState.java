@@ -5,21 +5,32 @@ import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallIPSetData;
 import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallOptionsData;
 import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallRuleData;
 import com.lumaserv.proxmox.ve.mock.state.qemu.QemuVMData;
+import org.javawebstack.abstractdata.mapper.annotation.MapperOptions;
 
 import java.util.*;
 
 public class MockState {
 
     public String currentUser = "root@pam";
+    @MapperOptions(generic = { String.class, PoolData.class })
     public Map<String, PoolData> pools = new HashMap<>();
+    @MapperOptions(generic = { Integer.class, QemuVMData.class })
     public Map<Integer, QemuVMData> qemuVMs = new HashMap<>();
+    @MapperOptions(generic = { String.class, NodeData.class })
     public Map<String, NodeData> nodes = new HashMap<>();
+    @MapperOptions(generic = TaskData.class)
     public List<TaskData> tasks = new ArrayList<>();
+    @MapperOptions(generic = { String.class, SDNZoneData.class })
     public Map<String, SDNZoneData> sdnZones = new HashMap<>();
+    @MapperOptions(generic = { String.class, SDNVNetData.class })
     public Map<String, SDNVNetData> sdnVNets = new HashMap<>();
+    @MapperOptions(generic = { String.class, StorageData.class })
     public Map<String, StorageData> storages = new HashMap<>();
+    @MapperOptions(generic = FirewallRuleData.class)
     public List<FirewallRuleData> firewallRules = new ArrayList<>();
+    @MapperOptions(generic = { String.class, FirewallGroupData.class })
     public Map<String, FirewallGroupData> firewallGroups = new HashMap<>();
+    @MapperOptions(generic = { String.class, FirewallIPSetData.class })
     public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();
     public FirewallOptionsData firewallOptions = new FirewallOptionsData();
 

@@ -8,13 +8,14 @@ import com.lumaserv.proxmox.ve.mock.state.firewall.*;
 import com.lumaserv.proxmox.ve.request.firewall.*;
 
 import java.util.Comparator;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.*;
 
 public class ClusterFirewallMocker extends Mocker {
 
-    public static void mockClusterAPI(ClusterAPI api, MockState state) {
+    public static void mockClusterAPI(ClusterAPI api, MockState state, Consumer<MockState> onChange) {
         try {
             /*
             Options
@@ -24,6 +25,7 @@ public class ClusterFirewallMocker extends Mocker {
                 FirewallOptionsUpdateRequest request = i.getArgument(0);
                 FirewallOptionsData options = state.firewallOptions;
                 FirewallHelper.updateOptions(options, request);
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallOptions(any(FirewallOptionsUpdateRequest.class));
 
@@ -33,6 +35,7 @@ public class ClusterFirewallMocker extends Mocker {
             doAnswer(i -> {
                 FirewallRuleCreateRequest request = i.getArgument(0);
                 FirewallHelper.createRule(state.firewallRules, request, true);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallRule(any(FirewallRuleCreateRequest.class));
             when(api.getFirewallRules()).then(i -> state.firewallRules.stream().sorted(Comparator.comparingInt(r -> r.pos)).map(FirewallRuleData::toFirewallRule).collect(Collectors.toList()));
@@ -47,11 +50,13 @@ public class ClusterFirewallMocker extends Mocker {
                 int pos = i.getArgument(0);
                 FirewallRuleUpdateRequest request = i.getArgument(2);
                 FirewallHelper.updateRule(state.firewallRules, pos, request, true);
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallRule(anyInt(), any(FirewallRuleUpdateRequest.class));
             doAnswer(i -> {
                 int pos = i.getArgument(0);
                 FirewallHelper.deleteRule(state.firewallRules, pos);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallRule(anyInt());
 
@@ -66,6 +71,7 @@ public class ClusterFirewallMocker extends Mocker {
                 firewallGroupData.name = request.getName();
                 firewallGroupData.comment = request.getComment();
                 state.firewallGroups.put(firewallGroupData.name, firewallGroupData);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallGroup(any(FirewallGroupCreateRequest.class));
             when(api.getFirewallGroups()).then(i -> state.firewallGroups.values().stream().map(FirewallGroupData::toFirewallGroup).collect(Collectors.toList()));
@@ -77,6 +83,7 @@ public class ClusterFirewallMocker extends Mocker {
                 if(group.rules.size() > 0)
                     throwError(409, "Group not empty");
                 state.firewallGroups.remove(name);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallGroup(anyString());
 
@@ -90,6 +97,7 @@ public class ClusterFirewallMocker extends Mocker {
                 if(firewallGroupData == null)
                     throwError(404, "Not Found");
                 FirewallHelper.createRule(firewallGroupData.rules, request, false);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallGroupRule(anyString(), any(FirewallRuleCreateRequest.class));
             when(api.getFirewallGroupRules(anyString())).then(i -> {
@@ -118,6 +126,7 @@ public class ClusterFirewallMocker extends Mocker {
                 if(firewallGroupData == null)
                     throwError(404, "Not Found");
                 FirewallHelper.updateRule(firewallGroupData.rules, pos, request, false);
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallGroupRule(anyString(), anyInt(), any(FirewallRuleUpdateRequest.class));
             doAnswer(i -> {
@@ -127,6 +136,7 @@ public class ClusterFirewallMocker extends Mocker {
                 if(firewallGroupData == null)
                     throwError(404, "Not Found");
                 FirewallHelper.deleteRule(firewallGroupData.rules, pos);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallGroupRule(anyString(), anyInt());
 
@@ -141,6 +151,7 @@ public class ClusterFirewallMocker extends Mocker {
                 ipset.name = request.getName();
                 ipset.comment = request.getComment();
                 state.firewallIpSets.put(ipset.name, ipset);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallIPSet(any(FirewallIPSetCreateRequest.class));
             when(api.getFirewallIPSets()).then(i -> state.firewallIpSets.values().stream().map(FirewallIPSetData::toFirewallIPSet).collect(Collectors.toList()));
@@ -152,6 +163,7 @@ public class ClusterFirewallMocker extends Mocker {
                 if(ipset.entries.size() > 0)
                     throwError(409, "IP Set not empty");
                 state.firewallIpSets.remove(name);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallIPSet(anyString());
 
@@ -174,6 +186,7 @@ public class ClusterFirewallMocker extends Mocker {
                 entry.comment = request.getComment();
                 entry.noMatch = request.getNoMatch() != null && request.getNoMatch() > 0;
                 ipset.entries.put(entry.cidr, entry);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallIPSetEntry(anyString(), any(FirewallIPSetEntryCreateRequest.class));
             when(api.getFirewallIPSetEntries(anyString())).then(i -> {
@@ -208,6 +221,7 @@ public class ClusterFirewallMocker extends Mocker {
                     entry.comment = request.getComment();
                 if(request.getNoMatch() != null)
                     entry.noMatch = request.getNoMatch() > 0;
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallIPSetEntry(anyString(), anyString(), any(FirewallIPSetEntryUpdateRequest.class));
             doAnswer(i -> {
@@ -218,6 +232,8 @@ public class ClusterFirewallMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!ipset.entries.containsKey(cidr))
                     throwError(404, "Not Found");
+                ipset.entries.remove(cidr);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallIPSetEntry(anyString(), anyString());
         } catch (ProxMoxVEException ignored) {}

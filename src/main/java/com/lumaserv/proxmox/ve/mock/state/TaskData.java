@@ -1,6 +1,7 @@
 package com.lumaserv.proxmox.ve.mock.state;
 
 import com.lumaserv.proxmox.ve.model.Task;
+import org.javawebstack.abstractdata.mapper.annotation.MapperOptions;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +17,7 @@ public class TaskData {
     public long start;
     public long end;
     public boolean error;
+    @MapperOptions(generic = String.class)
     public List<String> log = new ArrayList<>();
 
     public void finish() {

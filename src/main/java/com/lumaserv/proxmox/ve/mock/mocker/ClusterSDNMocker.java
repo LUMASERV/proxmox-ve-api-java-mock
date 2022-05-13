@@ -6,6 +6,7 @@ import com.lumaserv.proxmox.ve.mock.state.*;
 import com.lumaserv.proxmox.ve.request.sdn.*;
 
 import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -13,7 +14,7 @@ import static org.mockito.Mockito.*;
 
 public class ClusterSDNMocker extends Mocker {
 
-    public static void mockClusterAPI(ClusterAPI api, MockState state) {
+    public static void mockClusterAPI(ClusterAPI api, MockState state, Consumer<MockState> onChange) {
         try {
             /*
             Apply
@@ -25,6 +26,7 @@ public class ClusterSDNMocker extends Mocker {
                     task.finish();
                 }
                 reloadAllTask.finish();
+                onChange.accept(state);
                 return reloadAllTask.upId;
             });
 
@@ -45,6 +47,7 @@ public class ClusterSDNMocker extends Mocker {
                 if(request.getPeers() != null && request.getPeers().length() > 0)
                     sdnZone.peers.addAll(Arrays.asList(request.getPeers().split(",")));
                 state.sdnZones.put(sdnZone.name, sdnZone);
+                onChange.accept(state);
                 return null;
             }).when(api).createSDNZone(any(SDNZoneCreateRequest.class));
             doAnswer(i -> {
@@ -73,10 +76,12 @@ public class ClusterSDNMocker extends Mocker {
                                 zoneData.peers.clear();
                                 break;
                             default:
+                                onChange.accept(state);
                                 throwError(400, "Cannot delete '" + d + "'");
                         }
                     }
                 }
+                onChange.accept(state);
                 return null;
             }).when(api).updateSDNZone(anyString(), any(SDNZoneUpdateRequest.class));
             when(api.getSDNZones()).then(i -> api.getSDNZones(new SDNZoneGetRequest()));
@@ -101,6 +106,7 @@ public class ClusterSDNMocker extends Mocker {
                 if(state.sdnVNets.values().stream().anyMatch(v -> v.zone.equals(name)))
                     throwError(409, "Zone has Vnet's");
                 state.sdnZones.remove(name);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteSDNZone(anyString());
 
@@ -121,6 +127,7 @@ public class ClusterSDNMocker extends Mocker {
                 sdnVNet.name = request.getName();
                 sdnVNet.zone = request.getZone();
                 state.sdnVNets.put(sdnVNet.name, sdnVNet);
+                onChange.accept(state);
                 return null;
             }).when(api).createSDNVNet(any(SDNVNetCreateRequest.class));
             doAnswer(i -> {
@@ -148,10 +155,12 @@ public class ClusterSDNMocker extends Mocker {
                                 vNetData.vlanAware = false;
                                 break;
                             default:
+                                onChange.accept(state);
                                 throwError(400, "Cannot delete '" + d + "'");
                         }
                     }
                 }
+                onChange.accept(state);
                 return null;
             }).when(api).updateSDNVNet(anyString(), any(SDNVNetUpdateRequest.class));
             when(api.getSDNVNets()).then(i -> api.getSDNVNets(new SDNVNetGetRequest()));
@@ -166,6 +175,7 @@ public class ClusterSDNMocker extends Mocker {
                 if(state.sdnVNets.get(name).subnets.size() > 0)
                     throwError(409, "Vnet not empty");
                 state.sdnVNets.remove(name);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteSDNVNet(anyString());
 
@@ -185,6 +195,7 @@ public class ClusterSDNMocker extends Mocker {
                 subnetData.gateway = request.getGateway();
                 subnetData.type = request.getType();
                 vNetData.subnets.add(subnetData);
+                onChange.accept(state);
                 return null;
             }).when(api).createSDNVNetSubnet(anyString(), any(SDNSubnetCreateRequest.class));
             doAnswer(i -> {
@@ -213,10 +224,12 @@ public class ClusterSDNMocker extends Mocker {
                                 subnetData.gateway = null;
                                 break;
                             default:
+                                onChange.accept(state);
                                 throwError(400, "Cannot delete '" + d + "'");
                         }
                     }
                 }
+                onChange.accept(state);
                 return null;
             }).when(api).updateSDNVNetSubnet(anyString(), anyString(), any(SDNSubnetUpdateRequest.class));
             when(api.getSDNVNetSubnets(anyString())).then(i -> api.getSDNVNetSubnets(i.getArgument(0), new SDNSubnetGetRequest()));
@@ -238,6 +251,7 @@ public class ClusterSDNMocker extends Mocker {
                 if(subnetData == null)
                     throwError(404, "Not Found");
                 vNetData.subnets.remove(subnetData);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteSDNVNetSubnet(anyString(), anyString());
         } catch (ProxMoxVEException ignored) {}

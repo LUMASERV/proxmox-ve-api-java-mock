@@ -9,12 +9,14 @@ import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVMConfig;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.QemuVMConfigGetRequest;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.QemuVMConfigUpdateRequest;
 
+import java.util.function.Consumer;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 public class QemuVMConfigMocker extends Mocker {
 
-    public static void mockQemuVMAPI(QemuVMAPI api, int id, MockState state) {
+    public static void mockQemuVMAPI(QemuVMAPI api, int id, MockState state, Consumer<MockState> onChange) {
         try {
             when(api.getConfig()).then(i -> api.getConfig(new QemuVMConfigGetRequest()));
             when(api.getConfig(any(QemuVMConfigGetRequest.class))).then(i -> {
@@ -162,6 +164,7 @@ public class QemuVMConfigMocker extends Mocker {
                         }
                     }
                 }
+                onChange.accept(state);
                 return null;
             }).when(api).updateConfigSync(any(QemuVMConfigUpdateRequest.class));
             when(api.updateConfig(any(QemuVMConfigUpdateRequest.class))).then(i -> {
@@ -169,6 +172,7 @@ public class QemuVMConfigMocker extends Mocker {
                 TaskData task = state.createTask(data.node, "qmupdateconfig", data.id);
                 api.updateConfigSync(i.getArgument(0));
                 task.finish();
+                onChange.accept(state);
                 return task.upId;
             });
             when(api.getSnapshotConfig(anyString())).then(i -> api.getConfig());

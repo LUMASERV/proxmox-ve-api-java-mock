@@ -2,6 +2,7 @@ package com.lumaserv.proxmox.ve.mock.state;
 
 import com.lumaserv.proxmox.ve.mock.helper.DiskHelper;
 import com.lumaserv.proxmox.ve.mock.state.qemu.VolumeData;
+import org.javawebstack.abstractdata.mapper.annotation.MapperOptions;
 
 import java.util.*;
 
@@ -9,9 +10,13 @@ public class StorageData {
 
     public String name;
     public String type;
+    @MapperOptions(generic = { String.class, VolumeData.class })
     public Map<String, VolumeData> images = new HashMap<>();
+    @MapperOptions(generic = { String.class, VolumeData.class })
     public Map<String, VolumeData> isos = new HashMap<>();
+    @MapperOptions(generic = { String.class, VolumeData.class })
     public Map<String, VolumeData> snippets = new HashMap<>();
+    @MapperOptions(generic = { String.class, VolumeData.class })
     public Map<String, VolumeData> backups = new HashMap<>();
 
     public String createImage(String size, int vmId, String format) {

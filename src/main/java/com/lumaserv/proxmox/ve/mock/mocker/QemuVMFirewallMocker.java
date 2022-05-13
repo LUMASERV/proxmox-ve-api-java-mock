@@ -11,13 +11,14 @@ import com.lumaserv.proxmox.ve.mock.state.qemu.QemuVMData;
 import com.lumaserv.proxmox.ve.request.firewall.*;
 
 import java.util.Comparator;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import static org.mockito.Mockito.*;
 
 public class QemuVMFirewallMocker extends Mocker {
 
-    public static void mockQemuVMAPI(QemuVMAPI api, int id, MockState state) {
+    public static void mockQemuVMAPI(QemuVMAPI api, int id, MockState state, Consumer<MockState> onChange) {
         try {
             /*
             Options
@@ -34,6 +35,7 @@ public class QemuVMFirewallMocker extends Mocker {
                 if(qemuVMData == null)
                     throwError(404, "Not Found");
                 FirewallHelper.updateOptions(qemuVMData.firewallOptions, request);
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallOptions(any(FirewallOptionsUpdateRequest.class));
 
@@ -46,6 +48,7 @@ public class QemuVMFirewallMocker extends Mocker {
                     throwError(404, "Not Found");
                 FirewallRuleCreateRequest request = i.getArgument(0);
                 FirewallHelper.createRule(qemuVMData.firewallRules, request, false);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallRule(any(FirewallRuleCreateRequest.class));
             when(api.getFirewallRules()).then(i -> {
@@ -71,6 +74,7 @@ public class QemuVMFirewallMocker extends Mocker {
                 if(qemuVMData == null)
                     throwError(404, "Not Found");
                 FirewallHelper.updateRule(qemuVMData.firewallRules, pos, request, false);
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallRule(anyInt(), any(FirewallRuleUpdateRequest.class));
             doAnswer(i -> {
@@ -79,6 +83,7 @@ public class QemuVMFirewallMocker extends Mocker {
                 if(qemuVMData == null)
                     throwError(404, "Not Found");
                 FirewallHelper.deleteRule(qemuVMData.firewallRules, pos);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallRule(anyInt());
 
@@ -96,6 +101,7 @@ public class QemuVMFirewallMocker extends Mocker {
                 ipset.name = request.getName();
                 ipset.comment = request.getComment();
                 qemuVMData.firewallIpSets.put(ipset.name, ipset);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallIPSet(any(FirewallIPSetCreateRequest.class));
             when(api.getFirewallIPSets()).then(i -> {
@@ -115,6 +121,7 @@ public class QemuVMFirewallMocker extends Mocker {
                 if(ipset.entries.size() > 0)
                     throwError(409, "IP Set not empty");
                 qemuVMData.firewallIpSets.remove(name);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallIPSet(anyString());
 
@@ -140,6 +147,7 @@ public class QemuVMFirewallMocker extends Mocker {
                 entry.comment = request.getComment();
                 entry.noMatch = request.getNoMatch() != null && request.getNoMatch() > 0;
                 ipset.entries.put(entry.cidr, entry);
+                onChange.accept(state);
                 return null;
             }).when(api).createFirewallIPSetEntry(anyString(), any(FirewallIPSetEntryCreateRequest.class));
             when(api.getFirewallIPSetEntries(anyString())).then(i -> {
@@ -183,6 +191,7 @@ public class QemuVMFirewallMocker extends Mocker {
                     entry.comment = request.getComment();
                 if(request.getNoMatch() != null)
                     entry.noMatch = request.getNoMatch() > 0;
+                onChange.accept(state);
                 return null;
             }).when(api).updateFirewallIPSetEntry(anyString(), anyString(), any(FirewallIPSetEntryUpdateRequest.class));
             doAnswer(i -> {
@@ -196,6 +205,8 @@ public class QemuVMFirewallMocker extends Mocker {
                     throwError(404, "Not Found");
                 if(!ipset.entries.containsKey(cidr))
                     throwError(404, "Not Found");
+                ipset.entries.remove(cidr);
+                onChange.accept(state);
                 return null;
             }).when(api).deleteFirewallIPSetEntry(anyString(), anyString());
         } catch (ProxMoxVEException ignored) {}

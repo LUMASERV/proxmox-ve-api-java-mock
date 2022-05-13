@@ -16,6 +16,7 @@ import com.lumaserv.proxmox.ve.request.nodes.storage.NodeStorageGetRequest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -23,14 +24,14 @@ import static org.mockito.Mockito.*;
 
 public class NodeMocker extends Mocker {
 
-    public static void mockClient(ProxMoxVEClient client, MockState state) {
+    public static void mockClient(ProxMoxVEClient client, MockState state, Consumer<MockState> onChange) {
         try {
             when(client.getNodes()).then(i -> state.nodes.values().stream().map(NodeMocker::mockNode).collect(Collectors.toList()));
-            when(client.nodes(anyString())).then(i -> mockNodeAPI(client, state, i.getArgument(0)));
+            when(client.nodes(anyString())).then(i -> mockNodeAPI(client, state, i.getArgument(0), onChange));
         } catch (ProxMoxVEException ignored) {}
     }
 
-    public static NodeAPI mockNodeAPI(ProxMoxVEClient client, MockState state, String name) {
+    public static NodeAPI mockNodeAPI(ProxMoxVEClient client, MockState state, String name, Consumer<MockState> onChange) {
         NodeAPI api = mock(NodeAPI.class);
         NodeStorageMocker.mockNodeAPI(api, state);
         try {
@@ -98,10 +99,11 @@ public class NodeMocker extends Mocker {
                     throwError(404, "Not Found");
                 data.status = "stopped";
                 data.end = System.currentTimeMillis();
+                onChange.accept(state);
                 return null;
             }).when(api).stopTask(anyString());
         } catch (ProxMoxVEException ignored) {}
-        QemuVMMocker.mockNodeAPI(api, state);
+        QemuVMMocker.mockNodeAPI(api, state, onChange);
         return api;
     }
 

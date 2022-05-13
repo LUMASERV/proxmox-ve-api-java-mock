@@ -3,6 +3,7 @@ package com.lumaserv.proxmox.ve.mock.state.qemu;
 import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallIPSetData;
 import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallOptionsData;
 import com.lumaserv.proxmox.ve.mock.state.firewall.FirewallRuleData;
+import org.javawebstack.abstractdata.mapper.annotation.MapperOptions;
 
 import java.util.ArrayList;
 
@@ -35,11 +36,16 @@ public class QemuVMData {
     public String searchDomain;
     public String sshKeys;
     public String startup;
+    @MapperOptions(generic = { Integer.class, IPConfigData.class })
     public final Map<Integer, IPConfigData> ipConfigs = new HashMap();
+    @MapperOptions(generic = { Integer.class, NetworkData.class })
     public final Map<Integer, NetworkData> networks = new HashMap();
+    @MapperOptions(generic = { String.class, DiskData.class })
     public final Map<String, DiskData> disks = new HashMap();
     public FirewallOptionsData firewallOptions = new FirewallOptionsData();
+    @MapperOptions(generic = FirewallRuleData.class)
     public List<FirewallRuleData> firewallRules = new ArrayList<>();
+    @MapperOptions(generic = { String.class, FirewallIPSetData.class })
     public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();
 
     public boolean started = false;
