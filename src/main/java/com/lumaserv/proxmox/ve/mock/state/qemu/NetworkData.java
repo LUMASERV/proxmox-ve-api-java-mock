@@ -7,6 +7,7 @@ import com.lumaserv.proxmox.ve.util.OptionStringUtil;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.regex.Pattern;
 
 public class NetworkData {
@@ -74,6 +75,12 @@ public class NetworkData {
                     break;
             }
         }
+    }
+
+    public void generateMac() {
+        Random random = new Random();
+        // 02:00:00 is the first available local unicast prefix
+        mac = String.format("02:00:00:%02x:%02x:%02x", random.nextInt(256), random.nextInt(256), random.nextInt(256));
     }
 
     public String toOptionString() {

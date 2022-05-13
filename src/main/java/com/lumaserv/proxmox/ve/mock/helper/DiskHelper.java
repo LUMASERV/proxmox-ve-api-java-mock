@@ -41,4 +41,46 @@ public class DiskHelper {
         return ((int) size) + "G";
     }
 
+    public static boolean isValidFormat(String format) {
+        if(format.equals("qcow2") || format.equals("raw") || format.equals("vmdk"))
+            return true;
+        return false;
+    }
+
+    public static boolean isValidDisk(String disk) {
+        try {
+            if(disk.startsWith("ide")) {
+                int n = Integer.parseInt(disk.substring(3));
+                if(n < 0 || n > 3)
+                    return false;
+                return true;
+            }
+            if(disk.startsWith("scsi")) {
+                int n = Integer.parseInt(disk.substring(4));
+                if(n < 0 || n > 30)
+                    return false;
+                return true;
+            }
+            if(disk.startsWith("sata")) {
+                int n = Integer.parseInt(disk.substring(4));
+                if(n < 0 || n > 5)
+                    return false;
+                return true;
+            }
+            if(disk.startsWith("virtio")) {
+                int n = Integer.parseInt(disk.substring(6));
+                if(n < 0 || n > 15)
+                    return false;
+                return true;
+            }
+            if(disk.startsWith("unused")) {
+                int n = Integer.parseInt(disk.substring(6));
+                if(n < 0 || n > 255)
+                    return false;
+                return true;
+            }
+        } catch (NumberFormatException ignored) {}
+        return false;
+    }
+
 }

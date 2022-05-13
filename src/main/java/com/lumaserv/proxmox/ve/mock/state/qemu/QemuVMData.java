@@ -38,12 +38,18 @@ public class QemuVMData {
     public final Map<Integer, IPConfigData> ipConfigs = new HashMap();
     public final Map<Integer, NetworkData> networks = new HashMap();
     public final Map<String, DiskData> disks = new HashMap();
-    public final Map<Integer, String> unused = new HashMap();
     public FirewallOptionsData firewallOptions = new FirewallOptionsData();
     public List<FirewallRuleData> firewallRules = new ArrayList<>();
     public Map<String, FirewallIPSetData> firewallIpSets = new HashMap<>();
 
     public boolean started = false;
     public long startedAt = 0;
+
+    public String findUnused() {
+        int n = 0;
+        while (disks.containsKey("unused" + n))
+            n++;
+        return "unused" + n;
+    }
 
 }

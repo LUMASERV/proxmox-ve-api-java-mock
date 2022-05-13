@@ -194,11 +194,22 @@ public class QemuVMMocker extends Mocker {
                 if (request.getTarget() != null) {
                     NodeData nodeData = state.nodes.get(request.getTarget());
                     if (nodeData == null)
-                        throwError(404, "Node " + request.getTarget() + " does not exist");
+                        Mocker.throwError(400, "Parameter 'target' is invalid (target node not found)");
                     newData.node = request.getTarget();
                 } else {
                     newData.node = data.node;
                 }
+                if(request.getPool() != null) {
+                    PoolData pool = state.pools.get(request.getPool());
+                    if(pool == null)
+                        Mocker.throwError(400, "Parameter 'pool' is invalid (pool not found)");
+                    PoolData.Member member = new PoolData.Member();
+                    member.type = "vm";
+                    member.vmId = newData.id;
+                    pool.members.add(member);
+                }
+                if(request.getFormat() != null && !DiskHelper.isValidFormat(request.getFormat()))
+                    Mocker.throwError(400, "Parameter 'format' is invalid");
                 newData.agent = data.agent;
                 newData.arch = data.arch;
                 newData.bootOrder = data.bootOrder;
@@ -216,6 +227,66 @@ public class QemuVMMocker extends Mocker {
                 newData.name = request.getName() != null ? request.getName() : data.name;
                 newData.nameserver = data.nameserver;
                 newData.osType = data.osType;
+                for(int n : data.networks.keySet()) {
+                    NetworkData oldNetwork = data.networks.get(n);
+                    NetworkData newNetwork = new NetworkData();
+                    newNetwork.bridge = oldNetwork.bridge;
+                    newNetwork.model = oldNetwork.model;
+                    newNetwork.firewall = oldNetwork.firewall;
+                    newNetwork.rate = oldNetwork.rate;
+                    newNetwork.linkDown = oldNetwork.linkDown;
+                    newNetwork.tag = oldNetwork.tag;
+                    newNetwork.generateMac();
+                    newData.networks.put(n, newNetwork);
+                }
+                for(int n : data.ipConfigs.keySet()) {
+                    IPConfigData oldIPConfig = data.ipConfigs.get(n);
+                    IPConfigData newIPConfig = new IPConfigData();
+                    newIPConfig.ip = oldIPConfig.ip;
+                    newIPConfig.gateway = oldIPConfig.gateway;
+                    newIPConfig.ip6 = oldIPConfig.ip6;
+                    newIPConfig.gateway6 = oldIPConfig.gateway6;
+                    newData.ipConfigs.put(n, newIPConfig);
+                }
+                StorageData requestStorage = null;
+                if(request.getStorage() != null) {
+                    requestStorage = state.storages.get(request.getStorage());
+                    if(requestStorage == null)
+                        Mocker.throwError(400, "Parameter 'storage' is invalid (target storage not found)");
+                }
+                for(String diskName : data.disks.keySet()) {
+                    if(diskName.startsWith("unused")) // Don't clone unused volumes
+                        continue;
+                    DiskData oldDisk = data.disks.get(diskName);
+                    DiskData newDisk = new DiskData();
+                    newDisk.cache = oldDisk.cache;
+                    newDisk.cdrom = oldDisk.cdrom;
+                    newDisk.discard = oldDisk.discard;
+                    newDisk.ssd = oldDisk.ssd;
+                    newDisk.readIops = oldDisk.readIops;
+                    newDisk.writeIops = oldDisk.writeIops;
+                    newDisk.readMbps = oldDisk.readMbps;
+                    newDisk.writeMbps = oldDisk.writeMbps;
+                    if(newDisk.cdrom) {
+                        newDisk.storage = oldDisk.storage;
+                        newDisk.volume = oldDisk.volume;
+                    } else {
+                        StorageData oldStorage = state.storages.get(oldDisk.storage);
+                        VolumeData oldVolume = oldStorage.images.get(oldDisk.volume);
+                        StorageData newStorage = requestStorage != null ? requestStorage : oldStorage;
+                        newDisk.storage = newStorage.name;
+                        VolumeData newVolume = new VolumeData();
+                        newVolume.format = request.getFormat() != null ? request.getFormat() : oldVolume.format;
+                        newVolume.size = oldVolume.size;
+                        int n = 0;
+                        while(newStorage.images.containsKey("vm-" + newData.id + "-disk-" + n))
+                            n++;
+                        newVolume.name = "vm-" + newData.id + "-disk-" + n;
+                        newStorage.images.put(newVolume.name, newVolume);
+                        newDisk.volume = newVolume.name;
+                    }
+                    newData.disks.put(diskName, newDisk);
+                }
                 state.qemuVMs.put(request.getNewId(), newData);
                 task.finish();
                 return task.upId;
@@ -244,6 +315,91 @@ public class QemuVMMocker extends Mocker {
                 task.finish();
                 return task.upId;
             }).when(api).resize(any(QemuVMResizeRequest.class));
+            doAnswer(i -> {
+                QemuVMMoveDiskRequest request = i.getArgument(0);
+                verifyRequiredParam("disk", request.getDisk());
+                QemuVMData data = state.qemuVMs.get(id);
+                if(data == null)
+                    throwError(404, "Not Found");
+                DiskData diskData = data.disks.get(request.getDisk());
+                if(diskData == null)
+                    Mocker.throwError(400, "Parameter 'disk' is invalid (disk not found)");
+                if(request.getFormat() != null && !DiskHelper.isValidFormat(request.getFormat()))
+                    Mocker.throwError(400, "Parameter 'format' is invalid");
+                StorageData oldStorage = state.storages.get(diskData.storage);
+                VolumeData oldVolume = oldStorage.images.get(diskData.volume);
+                int newVMId = data.id;
+                StorageData newStorage = oldStorage;
+                if(request.getStorage() != null && !diskData.storage.equals(request.getStorage())) {
+                    newStorage = state.storages.get(request.getStorage());
+                    if(newStorage == null)
+                        Mocker.throwError(400, "Parameter 'storage' is invalid (storage not found)");
+                }
+                if(request.getTargetVMId() != null) {
+                    verifyRequiredParam("target-disk", request.getTargetDisk());
+                    if(!DiskHelper.isValidDisk(request.getTargetDisk()))
+                        Mocker.throwError(400, "Parameter 'target-disk' is invalid");
+                    QemuVMData targetVM = state.qemuVMs.get(request.getTargetVMId());
+                    if(targetVM == null)
+                        Mocker.throwError(400, "Parameter 'target-vmid' is invalid (vm not found)");
+                    if(!data.node.equals(targetVM.node))
+                        Mocker.throwError(500, "Source and target are on different nodes");
+                    if(targetVM.disks.containsKey(request.getTargetDisk()))
+                        Mocker.throwError(400, "Parameter 'target-disk' is invalid (disk exists on target vm)");
+                    newVMId = targetVM.id;
+                }
+                VolumeData newVolume = new VolumeData();
+                newVolume.format = request.getFormat() != null ? request.getFormat() : oldVolume.format;
+                int n = 0;
+                while(newStorage.images.containsKey("vm-" + newVMId + "-disk-" + n))
+                    n++;
+                newVolume.name = "vm-" + newVMId + "-disk-" + n;
+                newVolume.size = oldVolume.size;
+                newStorage.images.put(newVolume.name, newVolume);
+                DiskData newDiskData = new DiskData();
+                newDiskData.storage = newStorage.name;
+                newDiskData.volume = newVolume.name;
+                newDiskData.cache = diskData.cache;
+                newDiskData.discard = diskData.discard;
+                newDiskData.ssd = diskData.ssd;
+                newDiskData.readIops = diskData.readIops;
+                newDiskData.writeIops = diskData.writeIops;
+                newDiskData.readMbps = diskData.readMbps;
+                newDiskData.writeMbps = diskData.writeMbps;
+                if(request.getDelete() != null && request.getDelete() > 0) {
+                    data.disks.remove(request.getDisk());
+                    oldStorage.images.remove(oldVolume.name);
+                } else {
+                    data.disks.remove(request.getDisk());
+                    diskData.cdrom = false;
+                    diskData.discard = false;
+                    diskData.ssd = false;
+                    diskData.readIops = null;
+                    diskData.writeIops = null;
+                    diskData.readMbps = null;
+                    diskData.writeMbps = null;
+                    diskData.cache = null;
+                    data.disks.put(data.findUnused(), diskData);
+                }
+                QemuVMData targetVM = state.qemuVMs.get(newVMId);
+                targetVM.disks.put(request.getTargetDisk() != null ? request.getTargetDisk() : request.getDisk(), newDiskData);
+                return null;
+            }).when(api).moveDisk(any(QemuVMMoveDiskRequest.class));
+            when(api.migrate(any(QemuVMMigrateRequest.class))).then(i -> {
+                QemuVMMigrateRequest request = i.getArgument(0);
+                QemuVMData data = state.qemuVMs.get(id);
+                if(data == null)
+                    throwError(404, "Not Found");
+                verifyRequiredParam("target", request.getTarget());
+                if(request.getTarget().equals(data.node))
+                    Mocker.throwError(400, "VM is already on the target node");
+                if(!state.nodes.containsKey(request.getTarget()))
+                    Mocker.throwError(400, "Parameter 'target' is invalid (target node not found)");
+                TaskData task = state.createTask(data.node, "qmigrate", data.id);
+                data.node = request.getTarget();
+                task.finish();
+                return task.upId;
+            });
         } catch (ProxMoxVEException ignored) {}
         QemuVMConfigMocker.mockQemuVMAPI(api, id, state);
         QemuVMFirewallMocker.mockQemuVMAPI(api, id, state);

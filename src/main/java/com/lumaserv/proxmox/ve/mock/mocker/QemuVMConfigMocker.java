@@ -115,9 +115,9 @@ public class QemuVMConfigMocker extends Mocker {
                             if(diskData != null) {
                                 if(!diskData.cdrom) {
                                     int unused = 0;
-                                    while (data.unused.containsKey(unused))
+                                    while (data.disks.containsKey("unused" + unused))
                                         unused++;
-                                    data.unused.put(unused, diskData.storage + ":" + diskData.volume);
+                                    data.disks.put("unused" + unused, diskData);
                                 }
                                 data.disks.remove(k);
                             }
