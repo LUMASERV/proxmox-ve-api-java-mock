@@ -84,9 +84,9 @@ public class PoolMocker extends Mocker {
                     if(request.getVMs() != null && request.getVMs().length() > 0) {
                         Integer[] vmids = Stream.of(request.getVMs().split(",")).map(Integer::parseInt).toArray(Integer[]::new);
                         for(int vmid : vmids) {
-                            if(poolData.members.stream().anyMatch(m -> m.type.equals("vm") && m.vmId == vmid)) {
+                            if(state.pools.values().stream().anyMatch(p -> p.members.stream().anyMatch(m -> m.type.equals("vm") && m.vmId == vmid))) {
                                 onChange.accept(state);
-                                throwError(409, "VM already in pool");
+                                throwError(409, "VM already in a pool");
                             }
                         }
                         for(int vmid : vmids) {
@@ -100,7 +100,7 @@ public class PoolMocker extends Mocker {
                     if(request.getStorages() != null && request.getStorages().length() > 0) {
                         String[] storageIds = request.getStorages().split(",");
                         for(String storageId : storageIds) {
-                            if(poolData.members.stream().anyMatch(m -> m.type.equals("storage") && m.name.equals(storageId))) {
+                            if(state.pools.values().stream().anyMatch(p -> p.members.stream().anyMatch(m -> m.type.equals("storage") && m.name.equals(storageId)))) {
                                 onChange.accept(state);
                                 throwError(409, "Storage already in pool");
                             }

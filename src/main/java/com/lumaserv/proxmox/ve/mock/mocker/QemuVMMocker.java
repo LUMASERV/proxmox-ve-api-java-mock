@@ -4,12 +4,18 @@ import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.NodeAPI;
 import com.lumaserv.proxmox.ve.apis.QemuVMAPI;
 import com.lumaserv.proxmox.ve.mock.helper.DiskHelper;
+import com.lumaserv.proxmox.ve.mock.helper.RRDHelper;
 import com.lumaserv.proxmox.ve.mock.state.*;
 import com.lumaserv.proxmox.ve.mock.state.qemu.*;
 import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVM;
+import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVMRRDFrame;
+import com.lumaserv.proxmox.ve.model.nodes.qemu.QemuVMStatus;
+import com.lumaserv.proxmox.ve.request.nodes.RRDDataGetRequest;
 import com.lumaserv.proxmox.ve.request.nodes.qemu.*;
 
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -25,6 +31,10 @@ public class QemuVMMocker extends Mocker {
                 verifyRequiredParam("vmid", request.getId());
                 if(request.getId() < 100)
                     throwError(400, "vmid needs to be at least 100");
+                if(request.getArchive() != null) {
+                    // TODO Restore from backup
+                    throwError(501, "Restore is not implemented in the mock yet");
+                }
                 if(state.qemuVMs.containsKey(request.getId()))
                     throwError(400, "VM with this id already exists");
                 QemuVMData data = new QemuVMData();
@@ -413,6 +423,45 @@ public class QemuVMMocker extends Mocker {
                 task.finish();
                 onChange.accept(state);
                 return task.upId;
+            });
+            when(api.getStatus()).then(i -> {
+                QemuVMData data = state.qemuVMs.get(id);
+                if(data == null)
+                    throwError(404, "Not Found");
+                return new QemuVMStatus()
+                        .setCpu(0d)
+                        .setMemory(0L)
+                        .setMaxMemory((long) data.memory)
+                        .setFreeMemory((long) data.memory)
+                        .setMaxDisk(100L)
+                        .setDisk(25L)
+                        .setDiskRead(0L)
+                        .setDiskWrite(0L)
+                        .setCpus((double) data.cores)
+                        .setUptime(data.started ? ((int)((System.currentTimeMillis() - data.startedAt) / 1000)) : 0)
+                        .setStatus(data.started ? "running" : "stopped");
+            });
+            when(api.getRRDData(any(RRDDataGetRequest.class))).then(i -> {
+                RRDDataGetRequest request = i.getArgument(0);
+                List<QemuVMRRDFrame> frames = new ArrayList<>();
+                Random random = new Random();
+                double memorySeed = random.nextDouble() * 1000;
+                double cpuSeed = random.nextDouble() * 1000;
+                for(int f=0; f<75; f++) {
+                    frames.add(new QemuVMRRDFrame()
+                            .setMaxMemory(65536d)
+                            .setMemory(RRDHelper.noise(memorySeed + f) * 65536)
+                            .setMaxCpu(12d)
+                            .setCpu(RRDHelper.noise(cpuSeed + f) * 12)
+                            .setNetIn(0d)
+                            .setNetOut(0d)
+                            .setDiskWrite(0L)
+                            .setDiskRead(0L)
+                            .setMaxDisk(100L)
+                            .setDisk(25L + f)
+                    );
+                }
+                return frames;
             });
         } catch (ProxMoxVEException ignored) {}
         QemuVMConfigMocker.mockQemuVMAPI(api, id, state, onChange);

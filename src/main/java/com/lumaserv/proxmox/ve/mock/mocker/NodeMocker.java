@@ -3,12 +3,15 @@ package com.lumaserv.proxmox.ve.mock.mocker;
 import com.lumaserv.proxmox.ve.ProxMoxVEClient;
 import com.lumaserv.proxmox.ve.ProxMoxVEException;
 import com.lumaserv.proxmox.ve.apis.NodeAPI;
+import com.lumaserv.proxmox.ve.mock.helper.RRDHelper;
 import com.lumaserv.proxmox.ve.mock.state.MockState;
 import com.lumaserv.proxmox.ve.mock.state.NodeData;
 import com.lumaserv.proxmox.ve.mock.state.TaskData;
 import com.lumaserv.proxmox.ve.model.Task;
 import com.lumaserv.proxmox.ve.model.TaskLogLine;
 import com.lumaserv.proxmox.ve.model.nodes.Node;
+import com.lumaserv.proxmox.ve.model.nodes.NodeRRDFrame;
+import com.lumaserv.proxmox.ve.request.nodes.RRDDataGetRequest;
 import com.lumaserv.proxmox.ve.request.nodes.TaskGetRequest;
 import com.lumaserv.proxmox.ve.request.nodes.TaskLogRequest;
 import com.lumaserv.proxmox.ve.request.nodes.storage.NodeStorageGetRequest;
@@ -16,6 +19,7 @@ import com.lumaserv.proxmox.ve.request.nodes.storage.NodeStorageGetRequest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -102,6 +106,29 @@ public class NodeMocker extends Mocker {
                 onChange.accept(state);
                 return null;
             }).when(api).stopTask(anyString());
+            when(api.getRRDData(any(RRDDataGetRequest.class))).then(i -> {
+                RRDDataGetRequest request = i.getArgument(0);
+                List<NodeRRDFrame> frames = new ArrayList<>();
+                Random random = new Random();
+                double memorySeed = random.nextDouble() * 1000;
+                double cpuSeed = random.nextDouble() * 1000;
+                for(int f=0; f<75; f++) {
+                    frames.add(new NodeRRDFrame()
+                            .setMemoryTotal(65536L)
+                            .setMemoryUsed(RRDHelper.noise(memorySeed + f) * 65536)
+                            .setMaxCpu(12d)
+                            .setCpu(RRDHelper.noise(cpuSeed + f) * 12)
+                            .setNetIn(0d)
+                            .setNetOut(0d)
+                            .setLoadAverage(0d)
+                            .setSwapTotal(1024L)
+                            .setSwapUsed(0L)
+                            .setRootTotal(128L)
+                            .setRootUsed(0d)
+                    );
+                }
+                return frames;
+            });
         } catch (ProxMoxVEException ignored) {}
         QemuVMMocker.mockNodeAPI(api, state, onChange);
         return api;

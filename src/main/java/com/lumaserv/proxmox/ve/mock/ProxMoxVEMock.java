@@ -15,6 +15,7 @@ public class ProxMoxVEMock {
     public static ProxMoxVEClient create() {
         MockState state = new MockState();
         state.createNode("node01");
+        state.createStorage("local", "local");
         return create(state);
     }
 
