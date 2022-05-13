@@ -295,9 +295,7 @@ public class QemuVMMocker extends Mocker {
                 QemuVMResizeRequest request = i.getArgument(0);
                 verifyRequiredParam("disk", request.getDisk());
                 verifyRequiredParam("size", request.getSize());
-                QemuVMData data = state.qemuVMs.get(id);
-                if(data == null)
-                    throwError(404, "Not Found");
+                QemuVMData data = getVMData(state, id);
                 DiskData diskData = data.disks.get(request.getDisk());
                 if(diskData == null || diskData.cdrom)
                     throwError(400, "Unknown disk");
@@ -407,12 +405,11 @@ public class QemuVMMocker extends Mocker {
     }
 
     public static QemuVM mockQemuVM(QemuVMData data) {
-        QemuVM vm = new QemuVM()
+        return new QemuVM()
                 .setId(data.id)
                 .setName(data.name)
                 .setStatus(data.started ? "running" : "stopped")
                 .setUptime(data.started ? ((int)((System.currentTimeMillis() - data.startedAt) / 1000)) : null);
-        return vm;
     }
 
     private static String vmAlreadyRunningMsg(int id) {

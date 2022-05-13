@@ -11,6 +11,7 @@ import com.lumaserv.proxmox.ve.model.TaskLogLine;
 import com.lumaserv.proxmox.ve.model.nodes.Node;
 import com.lumaserv.proxmox.ve.request.nodes.TaskGetRequest;
 import com.lumaserv.proxmox.ve.request.nodes.TaskLogRequest;
+import com.lumaserv.proxmox.ve.request.nodes.storage.NodeStorageGetRequest;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,11 +27,12 @@ public class NodeMocker extends Mocker {
         try {
             when(client.getNodes()).then(i -> state.nodes.values().stream().map(NodeMocker::mockNode).collect(Collectors.toList()));
             when(client.nodes(anyString())).then(i -> mockNodeAPI(client, state, i.getArgument(0)));
-        } catch (ProxMoxVEException e) {}
+        } catch (ProxMoxVEException ignored) {}
     }
 
     public static NodeAPI mockNodeAPI(ProxMoxVEClient client, MockState state, String name) {
         NodeAPI api = mock(NodeAPI.class);
+        NodeStorageMocker.mockNodeAPI(api, state);
         try {
             when(api.getClient()).thenReturn(client);
             when(api.getNodeName()).thenReturn(name);
@@ -89,6 +91,15 @@ public class NodeMocker extends Mocker {
                     tasks.add(taskDatas.get(j).toTask());
                 return tasks;
             });
+            doAnswer(i -> {
+                String upid = i.getArgument(0);
+                TaskData data = state.tasks.stream().filter(t -> t.upId.equals(upid)).findFirst().orElse(null);
+                if(data == null)
+                    throwError(404, "Not Found");
+                data.status = "stopped";
+                data.end = System.currentTimeMillis();
+                return null;
+            }).when(api).stopTask(anyString());
         } catch (ProxMoxVEException ignored) {}
         QemuVMMocker.mockNodeAPI(api, state);
         return api;
