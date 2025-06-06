@@ -6,7 +6,7 @@
 
     <groupId>com.lumaserv</groupId>
     <artifactId>proxmox-ve-api-mock</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.3-SNAPSHOT</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -16,7 +16,7 @@
     <repositories>
         <repository>
             <id>lumaserv</id>
-            <url>https://maven.lumaserv.cloud</url>
+            <url>https://repo.lumaserv.dev/repository/lumaserv-api-snapshots</url>
         </repository>
         <repository>
             <id>ossrh</id>
@@ -28,7 +28,7 @@
         <dependency>
             <groupId>com.lumaserv</groupId>
             <artifactId>proxmox-ve-api</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.0.3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
